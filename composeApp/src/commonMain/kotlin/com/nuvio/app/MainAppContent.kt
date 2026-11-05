@@ -402,6 +402,7 @@ internal fun MainAppContent(
     val newCollectionTitle = stringResource(Res.string.collections_new)
     val detailsFallbackTitle = stringResource(Res.string.meta_section_details_title)
     val watchPartyTitle = stringResource(Res.string.party_title)
+    val magnetTitle = stringResource(Res.string.magnet_title)
     val isRemoteLibrarySource = libraryUiState.sourceMode != LibrarySourceMode.LOCAL
     val appContentGeneration = if (ownsAppRuntime && appGateController != null) {
         val generation by appGateController.contentGeneration.collectAsStateWithLifecycle()
@@ -901,6 +902,15 @@ internal fun MainAppContent(
                     is AppDeepLink.Party -> {
                         appGateController?.appReady?.first { it }
                         navController.navigate(PartyRoute(code = deepLink.code, title = watchPartyTitle)) {
+                            launchSingleTop = true
+                        }
+                        AppDeepLinkRepository.markConsumed(deepLink)
+                    }
+
+                    is AppDeepLink.Magnet -> {
+                        InAppLogger.info("App/DeepLink", "magnet open")
+                        activateTab(AppScreenTab.Home)
+                        navController.navigate(MagnetRoute(url = deepLink.url, title = magnetTitle)) {
                             launchSingleTop = true
                         }
                         AppDeepLinkRepository.markConsumed(deepLink)
@@ -1794,6 +1804,11 @@ internal fun MainAppContent(
                             sharedTransitionScope = this@SharedTransitionLayout,
                             animatedVisibilityScope = LocalNavAnimatedContentScope.current,
                         )
+                    }
+                }
+                entry<MagnetRoute> { route ->
+                    OpaqueAppSurfaces {
+                        MagnetDestination(route = route, navController = navController)
                     }
                 }
                 entry<PersonDetailRoute> { route ->

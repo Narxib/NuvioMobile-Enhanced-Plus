@@ -43,6 +43,12 @@ data class DetailRoute(
 ) : AppRoute
 
 @Serializable
+data class MagnetRoute(
+    val url: String,
+    override val title: String = "",
+) : AppRoute
+
+@Serializable
 data class PersonDetailRoute(
     val personId: Int,
     val personName: String,
