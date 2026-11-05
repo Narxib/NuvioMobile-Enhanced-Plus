@@ -4,6 +4,10 @@
 
   <h1>Nuvio Enhanced Plus</h1>
 
+  <h2>ALL OF THIS HAS BEEN VIBECODED , EVEN THIS README
+    
+ IT MAY CONTAIN BUGS OR ERRORS </h2>
+
   <p>
     An unofficial fork of <a href="https://github.com/luqmanfadlli/NuvioMobile-Enhanced">Nuvio Enhanced</a>, itself a
     fork of <a href="https://github.com/NuvioMedia/NuvioMobile">Nuvio Mobile</a>.
@@ -26,6 +30,7 @@
 
 ---
 
+
 ## What Enhanced Plus adds
 
 Right now the only exclusive feature is the ability to open magnet links from external sources. More may come later.
@@ -39,7 +44,10 @@ Right now the only exclusive feature is the ability to open magnet links from ex
 Everything else comes from [Nuvio Enhanced](https://github.com/luqmanfadlli/NuvioMobile-Enhanced) and
 [Nuvio Mobile](https://github.com/NuvioMedia/NuvioMobile).
 
+
+
 ## Install
+
 
 Download the APK from [Releases](https://github.com/Narxib/NuvioMobile-Enhanced-Plus/releases/latest).
 
