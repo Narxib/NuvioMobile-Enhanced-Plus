@@ -2520,6 +2520,7 @@
     <string name="magnet_search_hint">Título a buscar</string>
     <string name="magnet_search_action">Buscar</string>
     <string name="magnet_search_another">Buscar otro título</string>
+    <string name="magnet_search_section_body">¿No es la coincidencia correcta? Escribe el título y vuelve a buscar en TMDB.</string>
     <string name="magnet_section_file">Archivo del torrent</string>
     <string name="magnet_trackers">%1$d trackers</string>
     <string name="magnet_hash">Info hash</string>

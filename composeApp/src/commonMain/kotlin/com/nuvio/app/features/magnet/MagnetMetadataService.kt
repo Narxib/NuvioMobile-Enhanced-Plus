@@ -40,18 +40,16 @@ object MagnetMetadataService {
         val apiKey = TmdbSettingsRepository.effectiveApiKey().takeIf(String::isNotBlank)
             ?: return MagnetResolution(hint = hint, failure = MagnetResolveFailure.MissingTmdbKey)
         val language = normalizeTmdbLanguage(TmdbSettingsRepository.snapshot().language)
-        val response = fetch<TmdbMultiSearchResponse>(
-            endpoint = "search/multi",
-            apiKey = apiKey,
-            query = mapOf(
-                "query" to hint.title.encodeURLParameter(),
-                "language" to language,
-                "include_adult" to "false",
-                "page" to "1",
-            ),
-        ) ?: return MagnetResolution(hint = hint, failure = MagnetResolveFailure.TmdbUnavailable)
-
-        val candidates = response.results.mapNotNull(::toCandidate)
+        val searchLanguages = listOf(language, "en", "es-ES").distinct()
+        var candidates = searchMagnetCandidates(hint, apiKey, searchLanguages)
+            ?: return MagnetResolution(hint = hint, failure = MagnetResolveFailure.TmdbUnavailable)
+        if (candidates.isEmpty()) {
+            val baseTitle = removeSequelSuffix(hint.title)
+            if (baseTitle != hint.title) {
+                candidates = searchMagnetCandidates(hint.copy(title = baseTitle), apiKey, searchLanguages)
+                    ?: return MagnetResolution(hint = hint, failure = MagnetResolveFailure.TmdbUnavailable)
+            }
+        }
         val selected = selectMagnetCandidate(hint, candidates)
             ?: return MagnetResolution(hint = hint, failure = MagnetResolveFailure.NoMatch)
         val match = fetchMatch(selected, hint, apiKey, language)
@@ -63,6 +61,38 @@ object MagnetMetadataService {
             cache[cacheKey] = resolution
         }
         return resolution
+    }
+
+    private suspend fun searchMagnetCandidates(
+        hint: MagnetMediaHint,
+        apiKey: String,
+        languages: List<String>,
+    ): List<MagnetTmdbCandidate>? {
+        var anySucceeded = false
+        val bestByIdentity = linkedMapOf<Pair<MagnetMediaKind, Int>, MagnetTmdbCandidate>()
+        languages.forEach { searchLanguage ->
+            val response = fetch<TmdbMultiSearchResponse>(
+                endpoint = "search/multi",
+                apiKey = apiKey,
+                query = mapOf(
+                    "query" to hint.title.encodeURLParameter(),
+                    "language" to searchLanguage,
+                    "include_adult" to "false",
+                    "page" to "1",
+                ),
+            ) ?: return@forEach
+            anySucceeded = true
+            response.results.mapNotNull(::toCandidate).forEach { candidate ->
+                val identity = candidate.kind to candidate.id
+                val previous = bestByIdentity[identity]
+                if (previous == null ||
+                    scoreMagnetCandidate(hint, candidate) > scoreMagnetCandidate(hint, previous)
+                ) {
+                    bestByIdentity[identity] = candidate
+                }
+            }
+        }
+        return bestByIdentity.values.toList().takeIf { anySucceeded }
     }
 
     private suspend fun fetchMatch(
@@ -170,6 +200,13 @@ private fun tmdbImageUrl(path: String?, size: String): String? {
     val cleanPath = path?.trim()?.takeIf(String::isNotBlank) ?: return null
     return "https://image.tmdb.org/t/p/$size$cleanPath"
 }
+
+private val sequelSuffixPattern = Regex(
+    """(?i)\s+(?:ii|iii|iv|v|vi|season\s*\d+|part\s*\d+|\d+(?:st|nd|rd|th)\s+season)$""",
+)
+
+private fun removeSequelSuffix(title: String): String =
+    title.replace(sequelSuffixPattern, "").trim()
 
 private const val MAX_CACHE_ENTRIES = 64
 

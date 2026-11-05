@@ -3111,6 +3111,7 @@
     <string name="magnet_search_hint">Title to search</string>
     <string name="magnet_search_action">Search</string>
     <string name="magnet_search_another">Search another title</string>
+    <string name="magnet_search_section_body">Wrong match? Type the title and search TMDB again.</string>
     <string name="magnet_section_file">Torrent file</string>
     <string name="magnet_trackers">%1$d trackers</string>
     <string name="magnet_hash">Info hash</string>
