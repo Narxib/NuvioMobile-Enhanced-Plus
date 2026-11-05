@@ -5,24 +5,21 @@
 | Remote | Repository | Purpose |
 |---|---|---|
 | `upstream` | `luqmanfadlli/NuvioMobile-Enhanced` | Original project, never written to |
-| `origin` | `Narxib/NuvioMobile-Enhanced-Plus` | This fork, where the magnet branch lives |
+| `origin` | `Narxib/NuvioMobile-Enhanced-Plus` | This fork |
 
-Branches:
-
-- `feature/magnet-links`: main work. Contains **only** the magnet feature commits on top of `upstream/enhanced`.
-- `enhanced`: mirror of the original with no local changes. The sync script updates it. Never develop on it.
+The fork has a single branch, `main`: upstream plus the magnet feature. There is no mirror branch; `upstream/enhanced` is the reference.
 
 ## Syncing with an upstream update
 
 ```powershell
-git switch feature/magnet-links
+git switch main
 .\scripts\sync-upstream.ps1
 ```
 
 The script:
 
-1. Requires a clean tree and a branch other than `enhanced`.
-2. Runs `git fetch upstream --prune --tags` and updates the fork mirror.
+1. Requires a clean tree on `main`.
+2. Runs `git fetch upstream --prune --tags`.
 3. Creates a `backup/pre-sync-<date>` branch and an `upstream-base-<date>` tag.
 4. Reapplies the magnet commits with `git rebase upstream/enhanced`.
 5. Builds the debug APK to catch API drift.
@@ -36,7 +33,7 @@ If the rebase stops on conflicts: resolve them, `git add`, `git rebase --continu
 
 ## Why rebase and not merge
 
-A merge drags in sync commits and brings already-resolved conflicts back. Rebasing keeps the fork as a few clean commits on top of upstream, with a minimal, easy-to-audit diff. The branch is only yours, so rewriting its history is safe (`--force-with-lease`).
+A merge drags in sync commits and brings already-resolved conflicts back. Rebasing keeps `main` as a few clean commits on top of upstream, with a minimal, easy-to-audit diff. The branch is only yours, so rewriting its history is safe (`--force-with-lease`).
 
 ## Integration points with upstream code
 
@@ -67,10 +64,10 @@ Compile first with `assembleFullDebug`, then:
 .\scripts\publish-release.ps1 -Tag "v0.6.7-magnet.2" -Name "0.6.7 + Magnet 2" -NotesFile notes.md
 ```
 
-The script creates the release on the fork, computes the SHA-256 and uploads the APK as an asset. It uses the token already stored by Git Credential Manager.
+The script creates the release from `main`, computes the SHA-256 and uploads the APK as an asset. It uses the token already stored by Git Credential Manager.
 
 APKs are **debug** builds (debug signature, `com.nuviodebug.com`): meant for personal use and installable alongside the official app.
 
 ## If you ever want to upstream it
 
-With the feature isolated in a few commits, it can be sent as a PR to `enhanced`. Until then, rebasing is enough.
+With the feature isolated in a few commits, it can be sent as a PR to `upstream/enhanced`. Until then, rebasing is enough.

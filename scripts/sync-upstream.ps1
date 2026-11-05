@@ -4,7 +4,8 @@ param(
     [switch]$SkipBuild,
     [string]$UpstreamRemote = "upstream",
     [string]$UpstreamBranch = "enhanced",
-    [string]$ForkRemote = "origin"
+    [string]$ForkRemote = "origin",
+    [string]$ForkBranch = "main"
 )
 
 $ErrorActionPreference = "Stop"
@@ -25,23 +26,13 @@ function Get-GitOutput {
 Set-Location (Get-GitOutput @("rev-parse", "--show-toplevel"))
 
 $branch = Get-GitOutput @("rev-parse", "--abbrev-ref", "HEAD")
-if ($branch -eq "HEAD") { throw "Detached HEAD. Switch to the magnet branch first." }
-if ($branch -eq $UpstreamBranch) { throw "Refusing to sync the upstream branch itself." }
+if ($branch -eq "HEAD") { throw "Detached HEAD. Switch to $ForkBranch first." }
+if ($branch -ne $ForkBranch) { throw "Expected branch $ForkBranch, found $branch." }
 if (Get-GitOutput @("status", "--porcelain")) { throw "Working tree is dirty. Commit or stash first." }
 
 Invoke-Git @("fetch", $UpstreamRemote, "--prune", "--tags")
 
 $upstreamRef = "$UpstreamRemote/$UpstreamBranch"
-$mirrorSource = "refs/remotes/$UpstreamRemote/$UpstreamBranch"
-$mirrorTarget = "refs/heads/$UpstreamBranch"
-$previousPreference = $ErrorActionPreference
-$ErrorActionPreference = "Continue"
-& git push $ForkRemote "${mirrorSource}:${mirrorTarget}" 2>&1 | Out-Null
-$mirrorExitCode = $LASTEXITCODE
-$ErrorActionPreference = $previousPreference
-if ($mirrorExitCode -ne 0) {
-    Write-Host "Could not update the $UpstreamBranch mirror on $ForkRemote. Continuing." -ForegroundColor Yellow
-}
 & git merge-base --is-ancestor $upstreamRef HEAD
 if ($LASTEXITCODE -eq 0) {
     Write-Host "Already up to date with $upstreamRef."
