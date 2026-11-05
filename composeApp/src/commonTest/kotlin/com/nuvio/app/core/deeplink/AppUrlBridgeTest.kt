@@ -74,4 +74,17 @@ class AppUrlBridgeTest {
     fun `does not treat non-host stremio link as addon install`() {
         assertNull(parseAppDeepLink("stremio://detail/series/tt0944947"))
     }
+
+    @Test
+    fun `parses magnet links`() {
+        assertEquals(
+            AppDeepLink.Magnet(
+                "magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567&dn=Smallville.S01E06.mkv",
+            ),
+            parseAppDeepLink(
+                "magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567&dn=Smallville.S01E06.mkv",
+            ),
+        )
+        assertNull(parseAppDeepLink("magnet:?dn=without-hash.mkv"))
+    }
 }

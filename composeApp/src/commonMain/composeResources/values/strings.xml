@@ -3098,4 +3098,26 @@
     <string name="settings_glass_ui_style_dark">Dark</string>
     <string name="settings_glass_ui_style_balanced">Balanced</string>
     <string name="settings_glass_ui_style_vivid">Vivid</string>
+    <string name="magnet_title">Magnet link</string>
+    <string name="magnet_play">Play</string>
+    <string name="magnet_view_details">View details</string>
+    <string name="magnet_loading">Matching this magnet with TMDB…</string>
+    <string name="magnet_invalid_title">Invalid magnet link</string>
+    <string name="magnet_invalid_body">This link doesn\'t contain a valid BitTorrent info hash.</string>
+    <string name="magnet_no_match_title">No metadata match</string>
+    <string name="magnet_no_match_body">We couldn\'t match this file to a title. You can still play it, or search with a different name.</string>
+    <string name="magnet_missing_key">Add a TMDB API key in Settings → Content &amp; Discovery → TMDB to match magnet links with covers and details.</string>
+    <string name="magnet_unavailable">Couldn\'t reach TMDB. Check your connection and try again.</string>
+    <string name="magnet_search_hint">Title to search</string>
+    <string name="magnet_search_action">Search</string>
+    <string name="magnet_search_another">Search another title</string>
+    <string name="magnet_section_file">Torrent file</string>
+    <string name="magnet_trackers">%1$d trackers</string>
+    <string name="magnet_hash">Info hash</string>
+    <string name="magnet_size">Size</string>
+    <string name="magnet_p2p_disabled">P2P is off. Enable it to stream this magnet link.</string>
+    <string name="magnet_p2p_unavailable">P2P streaming isn\'t available in this build.</string>
+    <string name="magnet_episode">Episode</string>
+    <string name="magnet_movie">Movie</string>
+    <string name="magnet_series">Series</string>
 </resources>
