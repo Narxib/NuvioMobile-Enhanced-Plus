@@ -14,6 +14,9 @@ object MagnetFilenameParser {
     private val seriesPattern = Regex("""(?i)(?<![a-z0-9])s(\d{1,2})[\s._-]*e(\d{1,4})(?!\d)""")
     private val crossPattern = Regex("""(?<!\d)(\d{1,2})[xX](\d{1,4})(?!\d)""")
     private val seasonPackPattern = Regex("""(?i)(?<![a-z0-9])season[\s._-]*(\d{1,2})(?!\d)""")
+    private val absoluteEpisodePattern = Regex(
+        """(?i)(?<![a-z0-9])[-–—]\s*(\d{1,3})(?:\s*v\d)?(?=\s*(?:\[|\(|$|1080p|720p|2160p|480p|4k|web|bluray|hdtv|dvd))""",
+    )
     private val yearPattern = Regex("""(?<![\dx])(19\d{2}|20\d{2})(?![\dx])""")
     private val videoExtensionPattern = Regex("""(?i)\.(mkv|mp4|avi|mov|m4v|ts|m2ts|webm|wmv|flv)$""")
     private val leadingGroupPattern = Regex("""^\s*(\[[^\]]{1,60}]\s*)+""")
@@ -41,17 +44,24 @@ object MagnetFilenameParser {
 
         val episodeMatch = seriesPattern.find(name) ?: crossPattern.find(name)
         val seasonPackMatch = if (episodeMatch == null) seasonPackPattern.find(name) else null
+        val absoluteEpisodeMatch = if (episodeMatch == null && seasonPackMatch == null) {
+            absoluteEpisodePattern.find(name)
+        } else {
+            null
+        }
         val season = episodeMatch?.groupValues?.get(1)?.toIntOrNull()
             ?: seasonPackMatch?.groupValues?.get(1)?.toIntOrNull()
         val episode = episodeMatch?.groupValues?.get(2)?.toIntOrNull()
+            ?: absoluteEpisodeMatch?.groupValues?.get(1)?.toIntOrNull()
         val lastYearMatch = yearPattern.findAll(name).lastOrNull()
         val titleEnd = episodeMatch?.range?.first
             ?: seasonPackMatch?.range?.first
+            ?: absoluteEpisodeMatch?.range?.first
             ?: lastYearMatch?.range?.first
             ?: name.length
         val title = cleanTitle(
             value = name.substring(0, titleEnd),
-            stripTrailingYear = episodeMatch != null || seasonPackMatch != null,
+            stripTrailingYear = episodeMatch != null || seasonPackMatch != null || absoluteEpisodeMatch != null,
         )
         if (title.isBlank()) return null
 

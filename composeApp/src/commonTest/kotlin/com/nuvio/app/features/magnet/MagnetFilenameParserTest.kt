@@ -70,4 +70,24 @@ class MagnetFilenameParserTest {
 
         assertEquals("Smallville", hint?.title)
     }
+
+    @Test
+    fun `parses anime absolute episode numbering`() {
+        val hint = MagnetFilenameParser.parse(
+            "[Erai-raws] Tensei Shitara Ken Deshita II - 06 [1080p HIDIVE WEB-DL AVC AAC][23BEC8F4].mkv",
+        )
+
+        assertEquals("Tensei Shitara Ken Deshita II", hint?.title)
+        assertNull(hint?.season)
+        assertEquals(6, hint?.episode)
+    }
+
+    @Test
+    fun `keeps hyphenated movie titles without an episode number`() {
+        val hint = MagnetFilenameParser.parse("Spider-Man.2002.1080p.BluRay.mkv")
+
+        assertEquals("Spider-Man", hint?.title)
+        assertEquals(2002, hint?.year)
+        assertFalse(hint?.isSeries == true)
+    }
 }
