@@ -29,7 +29,7 @@
 At the momment the only exclusive feature is the ability to parse magnet links from external sources. I may or may not add more features if i feel like
 
 ## Install
-
+Just download the apk from <a href="https://github.com/Narxib/NuvioMobile-Enhanced-Plus/releases/latest"> releases</a>
 
 ## Build from source
 
