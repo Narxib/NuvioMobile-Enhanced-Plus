@@ -35,6 +35,7 @@ scripts/*
 !scripts/sign-ios-device-app.py
 !scripts/sync-upstream.ps1
 !scripts/magnet-sync.md
+!scripts/publish-release.ps1
 iosApp/Configuration/DeviceSigning.local.json
 
 # Local MPVKit iOS build environment (sparse APFS image, see MPVKit docs)
