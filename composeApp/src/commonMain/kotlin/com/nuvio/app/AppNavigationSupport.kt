@@ -27,6 +27,7 @@ internal val navigationSavedStateConfiguration = SavedStateConfiguration {
         polymorphic(NavKey::class) {
             subclass(TabsRoute::class, TabsRoute.serializer())
             subclass(DetailRoute::class, DetailRoute.serializer())
+            subclass(MagnetRoute::class, MagnetRoute.serializer())
             subclass(PersonDetailRoute::class, PersonDetailRoute.serializer())
             subclass(EntityBrowseRoute::class, EntityBrowseRoute.serializer())
             subclass(SettingsPageRoute::class, SettingsPageRoute.serializer())

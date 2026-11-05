@@ -3,6 +3,7 @@ package com.nuvio.app.core.deeplink
 import com.nuvio.app.core.tracking.ensureTrackingProvidersRegistered
 import com.nuvio.app.features.party.PARTY_CODE_LENGTH
 import com.nuvio.app.features.party.normalizePartyCode
+import com.nuvio.app.features.magnet.MagnetLink
 import com.nuvio.app.features.player.infusePlaybackCallbacks
 import com.nuvio.app.features.tracking.TrackingProviderRegistry
 import io.ktor.http.Url
@@ -25,6 +26,10 @@ internal sealed interface AppDeepLink {
 
     data class Party(
         val code: String,
+    ) : AppDeepLink
+
+    data class Magnet(
+        val url: String,
     ) : AppDeepLink
 }
 
@@ -68,11 +73,15 @@ fun buildMetaDeepLinkUrl(
 fun buildDownloadsDeepLinkUrl(): String = "nuvio://downloads"
 
 internal fun parseAppDeepLink(url: String): AppDeepLink? {
-    val parsedUrl = runCatching { Url(url) }.getOrNull() ?: return null
+    val trimmedUrl = url.trim()
+    if (trimmedUrl.startsWith("magnet:", ignoreCase = true)) {
+        return MagnetLink.parse(trimmedUrl)?.let { magnet -> AppDeepLink.Magnet(magnet.uri) }
+    }
+    val parsedUrl = runCatching { Url(trimmedUrl) }.getOrNull() ?: return null
     val scheme = parsedUrl.protocol.name.lowercase()
     if (scheme == "stremio") {
         return if (looksLikeAddonHost(parsedUrl.host.lowercase())) {
-            customSchemeToHttpsUrl(url, scheme)?.let(AppDeepLink::AddonInstall)
+            customSchemeToHttpsUrl(trimmedUrl, scheme)?.let(AppDeepLink::AddonInstall)
         } else {
             null
         }
