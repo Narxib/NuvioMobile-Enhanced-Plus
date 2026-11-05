@@ -5,7 +5,7 @@ param(
     [string]$NotesFile,
     [string]$ApkPath = "androidApp/build/outputs/apk/full/debug/androidApp-full-debug.apk",
     [string]$ForkRepo = "Narxib/NuvioMobile-Enhanced-Plus",
-    [string]$TargetCommitish = "feature/magnet-links",
+    [string]$TargetCommitish = "main",
     [switch]$Prerelease
 )
 
