@@ -18,9 +18,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
@@ -47,6 +50,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -70,6 +74,7 @@ import nuvio.composeapp.generated.resources.magnet_play
 import nuvio.composeapp.generated.resources.magnet_search_action
 import nuvio.composeapp.generated.resources.magnet_search_another
 import nuvio.composeapp.generated.resources.magnet_search_hint
+import nuvio.composeapp.generated.resources.magnet_search_section_body
 import nuvio.composeapp.generated.resources.magnet_section_file
 import nuvio.composeapp.generated.resources.magnet_series
 import nuvio.composeapp.generated.resources.magnet_size
@@ -187,6 +192,7 @@ internal fun MagnetScreen(
                     text = stringResource(Res.string.magnet_title),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onBackground,
                 )
             }
 
@@ -216,7 +222,10 @@ internal fun MagnetScreen(
                 }
             }
 
-            if (!isLoading && magnet != null && (showSearch || match == null)) {
+            if (!isLoading && magnet != null &&
+                resolution?.failure != MagnetResolveFailure.MissingTmdbKey &&
+                (showSearch || match == null)
+            ) {
                 Spacer(modifier = Modifier.height(20.dp))
                 SearchSection(
                     query = searchQuery,
@@ -300,12 +309,22 @@ private fun MatchContent(
                 .clip(RoundedCornerShape(14.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant),
         ) {
-            match?.posterUrl?.let { poster ->
+            val posterUrl = match?.posterUrl
+            if (posterUrl != null) {
                 NuvioAsyncImage(
-                    imageUrl = poster,
+                    imageUrl = posterUrl,
                     contentDescription = title,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Filled.Movie,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .size(40.dp),
                 )
             }
         }
@@ -315,6 +334,7 @@ private fun MatchContent(
                 text = title,
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground,
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -404,8 +424,10 @@ private fun MatchContent(
     }
 
     Spacer(modifier = Modifier.height(4.dp))
-    TextButton(onClick = onSearchAnother) {
-        Text(text = stringResource(Res.string.magnet_search_another))
+    if (match != null) {
+        TextButton(onClick = onSearchAnother) {
+            Text(text = stringResource(Res.string.magnet_search_another))
+        }
     }
 }
 
@@ -427,6 +449,7 @@ private fun TorrentDetails(magnet: MagnetLink) {
         Text(
             text = magnet.displayName ?: magnet.uri,
             style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onBackground,
             maxLines = 3,
             overflow = TextOverflow.Ellipsis,
         )
@@ -471,6 +494,7 @@ private fun MagnetMessage(title: String, body: String?) {
             text = title,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onBackground,
         )
         body?.let {
             Spacer(modifier = Modifier.height(6.dp))
@@ -490,12 +514,27 @@ private fun SearchSection(
     onSearch: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = stringResource(Res.string.magnet_search_another),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = stringResource(Res.string.magnet_search_section_body),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.height(10.dp))
         OutlinedTextField(
             value = query,
             onValueChange = onQueryChange,
             modifier = Modifier.fillMaxWidth(),
             label = { Text(text = stringResource(Res.string.magnet_search_hint)) },
             singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = { onSearch() }),
         )
         Spacer(modifier = Modifier.height(8.dp))
         Button(onClick = onSearch, modifier = Modifier.fillMaxWidth()) {
