@@ -1,64 +1,76 @@
-# Mantenimiento del fork de magnet
+# Keeping the magnet fork in sync
 
-## Remotos
+## Remotes
 
-| Remoto | Repositorio | Uso |
+| Remote | Repository | Purpose |
 |---|---|---|
-| `upstream` | `luqmanfadlli/NuvioMobile-Enhanced` | Código original, nunca se escribe |
-| `origin` | `Narxib/NuvioMobile-Enhanced-Plus` | Tu fork, ahí vive la rama magnet |
+| `upstream` | `luqmanfadlli/NuvioMobile-Enhanced` | Original project, never written to |
+| `origin` | `Narxib/NuvioMobile-Enhanced-Plus` | This fork, where the magnet branch lives |
 
-Ramas del fork:
+Branches:
 
-- `feature/magnet-links`: trabajo principal. Contiene **solo** los commits del feature magnet encima de `upstream/enhanced`.
-- `enhanced`: espejo del original, sin cambios propios. El script lo actualiza en cada sync. No se desarrolla sobre él.
+- `feature/magnet-links`: main work. Contains **only** the magnet feature commits on top of `upstream/enhanced`.
+- `enhanced`: mirror of the original with no local changes. The sync script updates it. Never develop on it.
 
-## Sincronizar con una actualización del original
+## Syncing with an upstream update
 
 ```powershell
 git switch feature/magnet-links
 .\scripts\sync-upstream.ps1
 ```
 
-El script:
+The script:
 
-1. Exige árbol limpio y rama distinta de `enhanced`.
-2. Hace `git fetch upstream --prune --tags`.
-3. Crea una rama de respaldo `backup/pre-sync-<fecha>` y una etiqueta `upstream-base-<fecha>`.
-4. Reaplica tus commits con `git rebase upstream/enhanced`.
-5. Compila el APK debug para detectar roturas de API.
-6. Con `-Push`, publica con `--force-with-lease`.
+1. Requires a clean tree and a branch other than `enhanced`.
+2. Runs `git fetch upstream --prune --tags` and updates the fork mirror.
+3. Creates a `backup/pre-sync-<date>` branch and an `upstream-base-<date>` tag.
+4. Reapplies the magnet commits with `git rebase upstream/enhanced`.
+5. Builds the debug APK to catch API drift.
+6. With `-Push`, publishes using `--force-with-lease`.
 
-Opciones: `-Push`, `-SkipBuild`.
+Options: `-Push`, `-SkipBuild`.
 
-Si el rebase se para por conflictos: resuélvelos, `git add`, `git rebase --continue`. Para deshacerlo todo, `git rebase --abort`. Si la compilación falla tras el rebase, `git reset --hard backup/pre-sync-<fecha>`.
+If the rebase stops on conflicts: resolve them, `git add`, `git rebase --continue`. To undo everything, `git rebase --abort`. If the build fails after the rebase, `git reset --hard backup/pre-sync-<date>`.
 
-`git rerere` está activado: los conflictos ya resueltos se reaplican solos en el siguiente sync.
+`git rerere` is enabled, so conflicts resolved once are reapplied automatically on the next sync.
 
-## Por qué rebase y no merge
+## Why rebase and not merge
 
-Un merge arrastra commits de sincronización y hace reaparecer conflictos ya resueltos. El rebase mantiene el fork como dos commits limpios sobre upstream, con un diff mínimo y fácil de auditar. La rama es solo tuya, así que reescribir su historial es seguro (`--force-with-lease`).
+A merge drags in sync commits and brings already-resolved conflicts back. Rebasing keeps the fork as a few clean commits on top of upstream, with a minimal, easy-to-audit diff. The branch is only yours, so rewriting its history is safe (`--force-with-lease`).
 
-## Puntos de integración con el código original
+## Integration points with upstream code
 
-Todo el feature vive en `composeApp/src/commonMain/kotlin/com/nuvio/app/features/magnet/`. Fuera de ahí solo hay enganches mínimos:
+The whole feature lives in `composeApp/src/commonMain/kotlin/com/nuvio/app/features/magnet/`. Outside of it there is only a handful of minimal hooks:
 
-| Archivo | Cambio | Riesgo de conflicto |
+| File | Change | Conflict risk |
 |---|---|---|
-| `AndroidManifest.xml` | intent-filters `magnet` y `SEND` | bajo |
-| `LinkActivity.kt` | reenvío de intents magnet | bajo |
-| `AppUrlBridge.kt` | `AppDeepLink.Magnet` | bajo |
-| `MainAppContent.kt` | consumo del deep link | bajo |
-| `Routes.kt`, `AppNavigationSupport.kt` | ruta y `entry<MagnetRoute>` | bajo |
-| `iosApp/iosApp/Info.plist` | esquema `magnet` | bajo |
-| `values/magnet_strings.xml`, `values-es/magnet_strings.xml` | textos del feature | nulo |
+| `AndroidManifest.xml` | `magnet` and `SEND` intent filters | low |
+| `LinkActivity.kt` | forwards magnet intents | low |
+| `AppUrlBridge.kt` | `AppDeepLink.Magnet` | low |
+| `MainAppContent.kt` | consumes the deep link | low |
+| `Routes.kt`, `AppNavigationSupport.kt` | route and `entry<MagnetRoute>` | low |
+| `iosApp/iosApp/Info.plist` | `magnet` URL scheme | low |
+| `values/magnet_strings.xml`, `values-es/magnet_strings.xml` | feature strings | none |
 
-Reglas para que siga siendo barato:
+Rules that keep the sync cheap:
 
-- No reformatear ni "limpiar" archivos del original. Cada línea tocada fuera de `features/magnet` es un posible conflicto.
-- Los textos nuevos van en `magnet_strings.xml`, nunca en `strings.xml`.
-- Los tests del feature viven en `commonTest/.../features/magnet/`.
-- Tras cada sync, instalar el APK y probar un magnet de película y uno de serie.
+- Do not reformat or clean up upstream files. Every line touched outside `features/magnet` is a potential conflict.
+- New strings go in `magnet_strings.xml`, never in `strings.xml`.
+- Feature tests live in `commonTest/.../features/magnet/`.
+- After every sync, install the APK and try one movie and one series magnet.
 
-## Si algún día quieres upstreamearlo
+## Publishing an update
 
-Con dos commits aislados, el feature se puede enviar como PR a `enhanced`. Mientras tanto, el rebase es suficiente.
+Compile first with `assembleFullDebug`, then:
+
+```powershell
+.\scripts\publish-release.ps1 -Tag "v0.6.7-magnet.2" -Name "0.6.7 + Magnet 2" -NotesFile notes.md
+```
+
+The script creates the release on the fork, computes the SHA-256 and uploads the APK as an asset. It uses the token already stored by Git Credential Manager.
+
+APKs are **debug** builds (debug signature, `com.nuviodebug.com`): meant for personal use and installable alongside the official app.
+
+## If you ever want to upstream it
+
+With the feature isolated in a few commits, it can be sent as a PR to `enhanced`. Until then, rebasing is enough.
