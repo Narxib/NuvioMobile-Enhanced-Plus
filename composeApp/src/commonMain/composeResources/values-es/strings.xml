@@ -2507,27 +2507,4 @@
     <string name="subtitle_shadow_opacity">Opacidad de la sombra</string>
     <string name="subtitle_shadow_size">Tamaño de la sombra</string>
     <string name="subtitle_reset_appearance">Restablecer apariencia</string>
-    <string name="magnet_title">Enlace magnet</string>
-    <string name="magnet_play">Reproducir</string>
-    <string name="magnet_view_details">Ver detalles</string>
-    <string name="magnet_loading">Buscando coincidencia en TMDB…</string>
-    <string name="magnet_invalid_title">Enlace magnet no válido</string>
-    <string name="magnet_invalid_body">Este enlace no contiene un info hash de BitTorrent válido.</string>
-    <string name="magnet_no_match_title">Sin coincidencia de metadatos</string>
-    <string name="magnet_no_match_body">No pudimos asociar este archivo a un título. Puedes reproducirlo igualmente o buscar con otro nombre.</string>
-    <string name="magnet_missing_key">Añade una clave API de TMDB en Ajustes → Contenido y descubrimiento → TMDB para asociar enlaces magnet con carátulas y detalles.</string>
-    <string name="magnet_unavailable">No se pudo conectar con TMDB. Revisa tu conexión e inténtalo de nuevo.</string>
-    <string name="magnet_search_hint">Título a buscar</string>
-    <string name="magnet_search_action">Buscar</string>
-    <string name="magnet_search_another">Buscar otro título</string>
-    <string name="magnet_search_section_body">¿No es la coincidencia correcta? Escribe el título y vuelve a buscar en TMDB.</string>
-    <string name="magnet_section_file">Archivo del torrent</string>
-    <string name="magnet_trackers">%1$d trackers</string>
-    <string name="magnet_hash">Info hash</string>
-    <string name="magnet_size">Tamaño</string>
-    <string name="magnet_p2p_disabled">P2P está desactivado. Actívalo para reproducir este enlace magnet.</string>
-    <string name="magnet_p2p_unavailable">La reproducción P2P no está disponible en esta versión.</string>
-    <string name="magnet_episode">Episodio</string>
-    <string name="magnet_movie">Película</string>
-    <string name="magnet_series">Serie</string>
 </resources>
