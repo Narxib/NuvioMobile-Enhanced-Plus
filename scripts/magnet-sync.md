@@ -31,6 +31,19 @@ If the rebase stops on conflicts: resolve them, `git add`, `git rebase --continu
 
 `git rerere` is enabled, so conflicts resolved once are reapplied automatically on the next sync.
 
+## When Enhanced lags behind Nuvio Mobile
+
+`upstream/enhanced` does not always carry the newest official version. If `NuvioMedia/NuvioMobile` has published a newer release, merge its tag directly while Enhanced catches up:
+
+```powershell
+$latest = Invoke-RestMethod "https://api.github.com/repos/NuvioMedia/NuvioMobile/releases/latest" -Headers @{ "User-Agent"="opencode" }
+git fetch https://github.com/NuvioMedia/NuvioMobile.git "refs/tags/$($latest.tag_name):refs/tags/nuvio-$($latest.tag_name)"
+git switch main
+git merge --no-ff "nuvio-$($latest.tag_name)"
+```
+
+The known conflicts are the shared OkHttp client (`NetworkErrorInterceptor` goes inside `SharedOkHttpClient.base`), the deleted `features/player/PlaybackBufferSettings.kt` (keep it deleted), the common `EmbeddedSubtitleTimelineLoader`, the MDBList writers (`TrackingAnimeIdMapper` first, then `inMdbListNumbering()`), and the iOS initializers in `MainViewController` (keep both). When Enhanced publishes its own integration, the next sync rebases and absorbs the official commits.
+
 ## Why rebase and not merge
 
 A merge drags in sync commits and brings already-resolved conflicts back. Rebasing keeps `main` as a few clean commits on top of upstream, with a minimal, easy-to-audit diff. The branch is only yours, so rewriting its history is safe (`--force-with-lease`).
