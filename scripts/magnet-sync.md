@@ -67,12 +67,14 @@ Compile first with ABI splits, so each release asset only carries one architectu
 That produces four APKs in `androidApp/build/outputs/apk/full/debug/`: `arm64-v8a`, `armeabi-v7a`, `x86` and `x86_64`. Then:
 
 ```powershell
-.\scripts\publish-release.ps1 -Tag "v0.6.9-magnet.2" -Name "0.6.9 + Magnet 2" -NotesFile notes.md
+.\scripts\publish-release.ps1 -Tag "0.6.9" -Name "0.6.9" -NotesFile notes.md
 ```
 
 The script picks up every APK in that directory, creates the release from `main`, computes each SHA-256 and uploads them as separate assets. It uses the token already stored by Git Credential Manager.
 
-APKs are **debug** builds (debug signature, `com.nuviodebug.com`): meant for personal use and installable alongside the official app. Debug APKs are still larger than release ones because R8 is not applied; the split only removes the other three architectures.
+Releases follow the official app's naming: the tag and title are the plain version (`0.6.9`, no `v`), and the assets keep the Gradle names with `-release` instead of `-debug` (`androidApp-full-arm64-v8a-release.apk`, `androidApp-full-armeabi-v7a-release.apk`, `androidApp-full-x86-release.apk`, `androidApp-full-x86_64-release.apk`).
+
+APKs are **debug** builds (debug signature, `com.nuviodebug.com`) despite the `-release` file name: meant for personal use and installable alongside the official app. Debug APKs are still larger than real release ones because R8 is not applied; the split only removes the other three architectures.
 
 ## If you ever want to upstream it
 

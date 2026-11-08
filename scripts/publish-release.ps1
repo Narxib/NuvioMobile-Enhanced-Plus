@@ -43,12 +43,10 @@ $headers = @{
     Accept = "application/vnd.github+json"
 }
 
-$version = $Tag.TrimStart("v")
-$assetBase = "NuvioPlus-$version"
 $rows = @()
 foreach ($apk in $apkFiles) {
     $abi = Get-AbiFromName $apk.Name
-    $assetName = if ($abi -eq "universal") { "$assetBase.apk" } else { "$assetBase-$abi.apk" }
+    $assetName = $apk.Name -replace "-debug\.apk$", "-release.apk"
     $sha256 = (Get-FileHash -LiteralPath $apk.FullName -Algorithm SHA256).Hash
     $sizeMb = [math]::Round($apk.Length / 1MB, 1)
     $rows += [pscustomobject]@{
