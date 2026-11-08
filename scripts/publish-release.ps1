@@ -56,7 +56,7 @@ $responseFile = Join-Path $env:TEMP "github-upload-response.json"
     -H "Authorization: Bearer $token" `
     -H "Accept: application/vnd.github+json" -H "User-Agent: opencode" `
     -H "Content-Type: application/vnd.android.package-archive" `
-    --data-binary "@$ApkPath" "$uploadUrl?name=$assetName" -o $responseFile
+    --data-binary "@$ApkPath" "${uploadUrl}?name=$assetName" -o $responseFile
 if ($LASTEXITCODE -ne 0) { throw "APK upload failed with exit code $LASTEXITCODE" }
 
 $uploadedAsset = Get-Content $responseFile -Raw | ConvertFrom-Json
