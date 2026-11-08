@@ -713,7 +713,9 @@ private fun PlayerScreenRuntime.BindPlayerMetadataAndSkipEffects() {
                         SkipIntroRepository.getSkipIntervalsForKitsu(kitsuId = kitsuId, episode = episode, imdbId = imdbFromContent, imdbSeason = season, imdbEpisode = episode)
                     }
                     else -> SkipIntroRepository.getSkipIntervals(
-                        imdbId = vid.substringBefore(':').takeIf { it.startsWith("tt") },
+                        imdbId = vid.substringBefore(':').takeIf { it.startsWith("tt") }
+                            ?: imdbFromContent
+                            ?: resolveParentalGuideImdbId(),
                         season = season,
                         episode = episode,
                     )
