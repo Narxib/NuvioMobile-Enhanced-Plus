@@ -54,6 +54,7 @@ Download the APK from [Releases](https://github.com/Narxib/NuvioMobile-Enhanced-
 - **Debug build** signed with the debug key. Personal use, not for the Play Store.
 - Installs as `com.nuviodebug.com`, so it can live alongside the official app. It replaces other debug builds of
   Enhanced or Plus, since they share the same application id.
+- Shows up as **Nuvio+** on the launcher, with its own icon and splash screen.
 - Requires a TMDB API key in **Settings → Content & Discovery → TMDB**.
 - P2P is disabled by default. Enable it in Settings and accept the legal notice before playing.
 
