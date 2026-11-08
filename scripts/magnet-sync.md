@@ -58,15 +58,21 @@ Rules that keep the sync cheap:
 
 ## Publishing an update
 
-Compile first with `assembleFullDebug`, then:
+Compile first with ABI splits, so each release asset only carries one architecture:
 
 ```powershell
-.\scripts\publish-release.ps1 -Tag "v0.6.7-magnet.2" -Name "0.6.7 + Magnet 2" -NotesFile notes.md
+.\gradlew.bat ":androidApp:assembleFullDebug" "-Pnuvio.android.distribution=full" "-Pnuvio.ios.distribution=appstore" "-Pnuvio.android.splitAbis=true"
 ```
 
-The script creates the release from `main`, computes the SHA-256 and uploads the APK as an asset. It uses the token already stored by Git Credential Manager.
+That produces four APKs in `androidApp/build/outputs/apk/full/debug/`: `arm64-v8a`, `armeabi-v7a`, `x86` and `x86_64`. Then:
 
-APKs are **debug** builds (debug signature, `com.nuviodebug.com`): meant for personal use and installable alongside the official app.
+```powershell
+.\scripts\publish-release.ps1 -Tag "v0.6.9-magnet.2" -Name "0.6.9 + Magnet 2" -NotesFile notes.md
+```
+
+The script picks up every APK in that directory, creates the release from `main`, computes each SHA-256 and uploads them as separate assets. It uses the token already stored by Git Credential Manager.
+
+APKs are **debug** builds (debug signature, `com.nuviodebug.com`): meant for personal use and installable alongside the official app. Debug APKs are still larger than release ones because R8 is not applied; the split only removes the other three architectures.
 
 ## If you ever want to upstream it
 
