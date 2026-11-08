@@ -50,6 +50,9 @@ val requestedTaskNames = gradle.startParameter.taskNames.map { it.substringAfter
 val buildsReleaseApks = requestedTaskNames.any {
     it.startsWith("assemble", ignoreCase = true) && it.endsWith("Release", ignoreCase = true)
 }
+val splitsDebugApks = providers.gradleProperty("nuvio.android.splitAbis")
+    .map(String::toBooleanStrict)
+    .getOrElse(false)
 
 android {
     namespace = "com.nuvio.android"
@@ -122,7 +125,7 @@ android {
 
     splits {
         abi {
-            isEnable = buildsReleaseApks
+            isEnable = buildsReleaseApks || splitsDebugApks
             reset()
             include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
             isUniversalApk = false
