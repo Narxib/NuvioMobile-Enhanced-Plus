@@ -93,6 +93,7 @@ internal fun isWatchProgressComplete(
     positionMs = positionMs,
     durationMs = durationMs,
     isEnded = isEnded,
+    completionThresholdFraction = ContinueWatchingPreferencesRepository.watchedThresholdPercent / 100.0,
 )
 
 internal fun List<WatchProgressEntry>.resumeEntryForSeries(metaId: String): WatchProgressEntry? {

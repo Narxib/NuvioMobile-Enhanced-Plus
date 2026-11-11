@@ -31,7 +31,7 @@ internal fun PlayerScreenRuntime.isAtNextEpisodeThreshold(): Boolean {
         isShortPlaceholderDuration(playbackSnapshot.durationMs)
     ) return false
     // Preload: trigger source fetch before the button appears
-    if (playerSettingsUiState.preloadNextEpisodeSources && !nextEpisodePreloadTriggered && nextEpisodeInfo != null && !isNetworkOffline()) {
+    if (playerSettingsUiState.preloadNextEpisodeSources && torrentEpisodes.isEmpty() && !nextEpisodePreloadTriggered && nextEpisodeInfo != null && !isNetworkOffline()) {
         val preloadLeadMs = maxOf(playerSettingsUiState.streamAutoPlayTimeoutSeconds.toLong() * 1_000L, 10_000L)
             .coerceAtMost(30_000L)
         val shouldPreloadByCard = PlayerNextEpisodeRules.shouldShowNextEpisodeCard(
@@ -355,7 +355,24 @@ internal fun CoroutineScope.launchPlayerNextEpisodeAutoPlay(
     }
 }
 
+internal fun PlayerScreenRuntime.nextTorrentEpisode(): PlayerTorrentEpisode? =
+    nextTorrentEpisode(torrentEpisodes, activeTorrentFileIdx)
+
+internal fun nextTorrentEpisode(
+    episodes: List<PlayerTorrentEpisode>,
+    currentFileIndex: Int?,
+): PlayerTorrentEpisode? {
+    if (episodes.size < 2 || currentFileIndex == null) return null
+    val currentIndex = episodes.indexOfFirst { it.fileIndex == currentFileIndex }
+    if (currentIndex < 0) return null
+    return episodes.getOrNull(currentIndex + 1)
+}
+
+internal fun PlayerTorrentEpisode.playbackVideoId(parentMetaId: String): String =
+    "$parentMetaId:$season:$episode"
+
 internal fun PlayerScreenRuntime.preloadNextEpisodeSources() {
+    if (torrentEpisodes.isNotEmpty()) return
     if (nextEpisodePreloadTriggered) return
     val nextEp = nextEpisodeInfo ?: return
     if (nextEp.hasAired != true) return

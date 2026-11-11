@@ -1,18 +1,24 @@
 package com.nuvio.app.features.settings
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -35,6 +41,9 @@ import com.nuvio.app.features.home.components.ContinueWatchingStylePreview
 import com.nuvio.app.features.watchprogress.ContinueWatchingPreferencesRepository
 import com.nuvio.app.features.watchprogress.ContinueWatchingSectionStyle
 import com.nuvio.app.features.watchprogress.ContinueWatchingSortMode
+import com.nuvio.app.features.watchprogress.WatchProgressCompletionThresholdMax
+import com.nuvio.app.features.watchprogress.WatchProgressCompletionThresholdMin
+import com.nuvio.app.features.watchprogress.WatchProgressCompletionThresholdStep
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.settings_continue_watching_resume_prompt_description
 import nuvio.composeapp.generated.resources.settings_continue_watching_resume_prompt_title
@@ -47,6 +56,11 @@ import nuvio.composeapp.generated.resources.settings_continue_watching_section_o
 import nuvio.composeapp.generated.resources.settings_continue_watching_section_sort_order
 import nuvio.composeapp.generated.resources.settings_continue_watching_section_up_next_behavior
 import nuvio.composeapp.generated.resources.settings_continue_watching_section_visibility
+import nuvio.composeapp.generated.resources.settings_continue_watching_section_watched_status
+import nuvio.composeapp.generated.resources.settings_continue_watching_watched_threshold_description
+import nuvio.composeapp.generated.resources.settings_continue_watching_watched_threshold_slider
+import nuvio.composeapp.generated.resources.settings_continue_watching_watched_threshold_title
+import nuvio.composeapp.generated.resources.settings_continue_watching_watched_threshold_value
 import nuvio.composeapp.generated.resources.settings_continue_watching_show_description
 import nuvio.composeapp.generated.resources.settings_continue_watching_show_title
 import nuvio.composeapp.generated.resources.settings_continue_watching_sort_mode_default
@@ -79,6 +93,7 @@ internal fun LazyListScope.continueWatchingSettingsContent(
     blurNextUp: Boolean,
     showResumePromptOnLaunch: Boolean,
     sortMode: ContinueWatchingSortMode,
+    watchedThresholdPercent: Int,
 ) {
     item {
         SettingsSection(
@@ -148,6 +163,65 @@ internal fun LazyListScope.continueWatchingSettingsContent(
                         isTablet = isTablet,
                         onCheckedChange = ContinueWatchingPreferencesRepository::setBlurNextUp,
                     )
+                }
+            }
+        }
+    }
+    item {
+        var showWatchedThreshold by remember { mutableStateOf(false) }
+        SettingsSection(
+            title = stringResource(Res.string.settings_continue_watching_section_watched_status),
+            isTablet = isTablet,
+        ) {
+            SettingsGroup(isTablet = isTablet) {
+                SettingsNavigationRow(
+                    title = stringResource(Res.string.settings_continue_watching_watched_threshold_title),
+                    description = stringResource(
+                        Res.string.settings_continue_watching_watched_threshold_description,
+                    ),
+                    isTablet = isTablet,
+                    trailingContent = {
+                        ValueBox(
+                            text = stringResource(
+                                Res.string.settings_continue_watching_watched_threshold_value,
+                                watchedThresholdPercent,
+                            ),
+                            modifier = Modifier.wrapContentWidth(),
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Icon(
+                            imageVector = if (showWatchedThreshold) {
+                                Icons.Rounded.KeyboardArrowUp
+                            } else {
+                                Icons.Rounded.KeyboardArrowDown
+                            },
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
+                    onClick = { showWatchedThreshold = !showWatchedThreshold },
+                )
+                AnimatedVisibility(visible = showWatchedThreshold) {
+                    Column {
+                        SettingsGroupDivider(isTablet = isTablet)
+                        SettingsSliderRow(
+                            title = stringResource(
+                                Res.string.settings_continue_watching_watched_threshold_slider,
+                            ),
+                            value = watchedThresholdPercent,
+                            formatValue = { percent ->
+                                stringResource(
+                                    Res.string.settings_continue_watching_watched_threshold_value,
+                                    percent,
+                                )
+                            },
+                            valueRange = WatchProgressCompletionThresholdMin..
+                                WatchProgressCompletionThresholdMax,
+                            step = WatchProgressCompletionThresholdStep,
+                            isTablet = isTablet,
+                            onValueChange = ContinueWatchingPreferencesRepository::setWatchedThresholdPercent,
+                        )
+                    }
                 }
             }
         }

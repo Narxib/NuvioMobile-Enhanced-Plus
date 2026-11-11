@@ -20,13 +20,14 @@ internal fun MagnetDestination(
     MagnetScreen(
         url = route.url,
         onBack = onBack,
-        onPlay = { resolution ->
+        onPlay = { resolution, target ->
             val magnet = MagnetLink.parse(route.url)
             if (magnet != null) {
                 val launch = buildMagnetPlayerLaunch(
                     magnet = magnet,
                     resolution = resolution,
                     profileId = ProfileRepository.activeProfileId,
+                    target = target,
                 )
                 val launchId = PlayerLaunchStore.put(launch)
                 navController.navigate(PlayerRoute(launchId = launchId, title = launch.title))

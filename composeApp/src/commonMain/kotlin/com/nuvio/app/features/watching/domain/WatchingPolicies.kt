@@ -6,7 +6,7 @@ import com.nuvio.app.core.time.isEpisodeReleaseAired
 import com.nuvio.app.core.time.isoEpochDay as coreIsoEpochDay
 import com.nuvio.app.core.time.parseEpisodeReleaseLocalDate
 
-private const val CompletionThresholdFraction = 0.90
+private const val DefaultCompletionThresholdFraction = 0.90
 private const val ProgressStoreThresholdMs = 1_000L
 private const val UpcomingNextSeasonWindowDays = 7
 
@@ -32,13 +32,14 @@ fun isProgressComplete(
     positionMs: Long,
     durationMs: Long,
     isEnded: Boolean,
+    completionThresholdFraction: Double = DefaultCompletionThresholdFraction,
 ): Boolean {
     if (isShortPlaceholderDuration(durationMs)) return false
     if (isEnded) return true
     if (durationMs <= 0L) return false
 
     val watchedFraction = positionMs.toDouble() / durationMs.toDouble()
-    return watchedFraction >= CompletionThresholdFraction
+    return watchedFraction >= completionThresholdFraction
 }
 
 /**

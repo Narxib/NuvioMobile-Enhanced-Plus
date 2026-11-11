@@ -74,6 +74,7 @@ internal fun PlayerDestination(
         torrentFileIdx = launch.torrentFileIdx,
         torrentFilename = launch.torrentFilename,
         torrentTrackers = launch.torrentTrackers,
+        torrentEpisodes = launch.torrentEpisodes,
         initialPositionMs = launch.initialPositionMs,
         initialProgressFraction = launch.initialProgressFraction,
         contentLanguage = launch.contentLanguage,

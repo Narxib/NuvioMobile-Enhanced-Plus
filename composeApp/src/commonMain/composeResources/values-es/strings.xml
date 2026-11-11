@@ -824,6 +824,11 @@
     <string name="settings_continue_watching_section_on_launch">AL INICIAR</string>
     <string name="settings_continue_watching_section_up_next_behavior">COMPORTAMIENTO DE SIGUIENTE</string>
     <string name="settings_continue_watching_section_visibility">VISIBILIDAD</string>
+    <string name="settings_continue_watching_section_watched_status">ESTADO VISTO</string>
+    <string name="settings_continue_watching_watched_threshold_title">Marcar como visto a partir de</string>
+    <string name="settings_continue_watching_watched_threshold_description">Porcentaje del episodio que cuenta como visto.</string>
+    <string name="settings_continue_watching_watched_threshold_slider">Porcentaje mínimo</string>
+    <string name="settings_continue_watching_watched_threshold_value">%1$d%</string>
     <string name="settings_continue_watching_show_description">Mostrar el estante de Seguir viendo en la pantalla de inicio.</string>
     <string name="settings_continue_watching_show_title">Mostrar Seguir viendo</string>
     <string name="settings_continue_watching_style_card">Tarjeta</string>

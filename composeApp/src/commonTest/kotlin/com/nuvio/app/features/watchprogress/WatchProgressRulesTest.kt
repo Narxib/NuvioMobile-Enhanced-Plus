@@ -3,6 +3,7 @@ package com.nuvio.app.features.watchprogress
 import com.nuvio.app.features.cloud.TorboxCloudLibraryPosterUrl
 import com.nuvio.app.features.details.MetaVideo
 import com.nuvio.app.features.trakt.parseTraktIsoDateTimeToEpochMs
+import com.nuvio.app.features.watching.domain.isProgressComplete
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -76,6 +77,14 @@ class WatchProgressRulesTest {
         assertFalse(isWatchProgressComplete(positionMs = 899_999L, durationMs = 1_000_000L, isEnded = false))
         assertTrue(isWatchProgressComplete(positionMs = 1L, durationMs = 0L, isEnded = true))
         assertFalse(isWatchProgressComplete(positionMs = 200_000L, durationMs = 1_000_000L, isEnded = false))
+    }
+
+    @Test
+    fun `completion honors a custom watched threshold`() {
+        assertFalse(isProgressComplete(749_999L, 1_000_000L, isEnded = false, completionThresholdFraction = 0.75))
+        assertTrue(isProgressComplete(750_000L, 1_000_000L, isEnded = false, completionThresholdFraction = 0.75))
+        assertFalse(isProgressComplete(699_999L, 1_000_000L, isEnded = false, completionThresholdFraction = 0.70))
+        assertTrue(isProgressComplete(700_000L, 1_000_000L, isEnded = false, completionThresholdFraction = 0.70))
     }
 
     @Test
