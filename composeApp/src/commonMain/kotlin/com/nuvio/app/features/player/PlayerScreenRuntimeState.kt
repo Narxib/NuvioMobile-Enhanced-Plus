@@ -73,6 +73,7 @@ internal class PlayerScreenRuntime(
     val torrentFileIdx: Int? get() = args.torrentFileIdx
     val torrentFilename: String? get() = args.torrentFilename
     val torrentTrackers: List<String> get() = args.torrentTrackers
+    val torrentEpisodes: List<PlayerTorrentEpisode> get() = args.torrentEpisodes
     val initialPositionMs: Long get() = args.initialPositionMs
     val initialProgressFraction: Float? get() = args.initialProgressFraction
     var externalSubtitles by mutableStateOf(args.externalSubtitles)

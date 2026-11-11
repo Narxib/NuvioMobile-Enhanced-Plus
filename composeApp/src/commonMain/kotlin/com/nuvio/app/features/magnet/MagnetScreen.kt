@@ -1,6 +1,9 @@
 package com.nuvio.app.features.magnet
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +20,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -26,6 +30,8 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -48,6 +54,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -55,15 +63,29 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.ui.NuvioAsyncImage
+import com.nuvio.app.core.ui.accentBrush
+import com.nuvio.app.core.ui.themePalette
 import com.nuvio.app.features.p2p.P2pConsentDialog
 import com.nuvio.app.features.p2p.P2pSettingsRepository
+import com.nuvio.app.features.p2p.P2pStreamingEngine
+import com.nuvio.app.features.p2p.P2pTorrentFile
+import com.nuvio.app.features.watched.WatchedRepository
+import com.nuvio.app.features.watchprogress.WatchProgressRepository
+import com.nuvio.app.features.watchprogress.WatchProgressUiState
 import com.nuvio.app.navigation.LocalUseNativeNavigation
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.Res
+import nuvio.composeapp.generated.resources.episode_mark_unwatched
+import nuvio.composeapp.generated.resources.episode_mark_watched
 import nuvio.composeapp.generated.resources.magnet_episode
+import nuvio.composeapp.generated.resources.magnet_episodes_range
+import nuvio.composeapp.generated.resources.magnet_files_error
 import nuvio.composeapp.generated.resources.magnet_hash
 import nuvio.composeapp.generated.resources.magnet_invalid_body
 import nuvio.composeapp.generated.resources.magnet_invalid_title
 import nuvio.composeapp.generated.resources.magnet_loading
+import nuvio.composeapp.generated.resources.magnet_loading_files
 import nuvio.composeapp.generated.resources.magnet_missing_key
 import nuvio.composeapp.generated.resources.magnet_movie
 import nuvio.composeapp.generated.resources.magnet_no_match_body
@@ -75,7 +97,9 @@ import nuvio.composeapp.generated.resources.magnet_search_action
 import nuvio.composeapp.generated.resources.magnet_search_another
 import nuvio.composeapp.generated.resources.magnet_search_hint
 import nuvio.composeapp.generated.resources.magnet_search_section_body
+import nuvio.composeapp.generated.resources.magnet_section_episodes
 import nuvio.composeapp.generated.resources.magnet_section_file
+import nuvio.composeapp.generated.resources.magnet_section_files
 import nuvio.composeapp.generated.resources.magnet_series
 import nuvio.composeapp.generated.resources.magnet_size
 import nuvio.composeapp.generated.resources.magnet_title
@@ -83,14 +107,13 @@ import nuvio.composeapp.generated.resources.magnet_trackers
 import nuvio.composeapp.generated.resources.magnet_unavailable
 import nuvio.composeapp.generated.resources.magnet_view_details
 import org.jetbrains.compose.resources.stringResource
-import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 @Composable
 internal fun MagnetScreen(
     url: String,
     onBack: () -> Unit,
-    onPlay: (MagnetResolution) -> Unit,
+    onPlay: (MagnetResolution, MagnetPlaybackTarget?) -> Unit,
     onOpenDetails: (MagnetMatch) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -100,13 +123,29 @@ internal fun MagnetScreen(
     var searchQuery by remember(url) { mutableStateOf("") }
     var showSearch by remember(url) { mutableStateOf(false) }
     var showP2pConsent by remember { mutableStateOf(false) }
+    var pendingPlayTarget by remember { mutableStateOf<MagnetPlaybackTarget?>(null) }
+    var torrentFiles by remember(url) { mutableStateOf(emptyList<P2pTorrentFile>()) }
+    var isLoadingFiles by remember(url) { mutableStateOf(false) }
+    var filesError by remember(url) { mutableStateOf(false) }
     val p2pSettings by remember {
         P2pSettingsRepository.ensureLoaded()
         P2pSettingsRepository.uiState
     }.collectAsStateWithLifecycle()
+    val watchedState by remember {
+        WatchedRepository.ensureLoaded()
+        WatchedRepository.uiState
+    }.collectAsStateWithLifecycle()
+    val watchProgress by remember {
+        WatchProgressRepository.ensureLoaded()
+        WatchProgressRepository.uiState
+    }.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     val background = MaterialTheme.colorScheme.background
     val match = resolution?.match
+    val fallbackSeason = resolution?.hint?.season ?: match?.seasonNumber
+    val fileRows = remember(torrentFiles, fallbackSeason) {
+        buildMagnetFileRows(torrentFiles, fallbackSeason)
+    }
 
     fun resolve(query: String? = null) {
         val link = magnet ?: return
@@ -128,14 +167,37 @@ internal fun MagnetScreen(
         isLoading = false
     }
 
-    fun play() {
+    LaunchedEffect(url, p2pSettings.p2pEnabled) {
+        val link = magnet ?: return@LaunchedEffect
+        if (!P2pSettingsRepository.isVisible || !p2pSettings.p2pEnabled) {
+            torrentFiles = emptyList()
+            isLoadingFiles = false
+            filesError = false
+            return@LaunchedEffect
+        }
+        isLoadingFiles = true
+        filesError = false
+        try {
+            torrentFiles = P2pStreamingEngine.listFiles(link.infoHash, link.trackers)
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (_: Exception) {
+            torrentFiles = emptyList()
+            filesError = true
+        } finally {
+            isLoadingFiles = false
+        }
+    }
+
+    fun play(target: MagnetPlaybackTarget?) {
         if (!P2pSettingsRepository.isVisible) return
         val current = resolution ?: return
         if (!p2pSettings.p2pEnabled) {
+            pendingPlayTarget = target
             showP2pConsent = true
             return
         }
-        onPlay(current)
+        onPlay(current, target)
     }
 
     Box(
@@ -212,6 +274,11 @@ internal fun MagnetScreen(
                         magnet = magnet,
                         resolution = currentResolution,
                         p2pEnabled = p2pSettings.p2pEnabled,
+                        fileRows = fileRows,
+                        isLoadingFiles = isLoadingFiles,
+                        filesError = filesError,
+                        watchedKeys = watchedState.watchedKeys,
+                        watchProgress = watchProgress,
                         onPlay = ::play,
                         onOpenDetails = { currentResolution.match?.let(onOpenDetails) },
                         onSearchAnother = {
@@ -244,13 +311,18 @@ internal fun MagnetScreen(
     }
 
     if (showP2pConsent) {
+        val target = pendingPlayTarget
         P2pConsentDialog(
             onEnableP2p = {
                 P2pSettingsRepository.setP2pEnabled(true)
                 showP2pConsent = false
-                resolution?.let(onPlay)
+                pendingPlayTarget = null
+                resolution?.let { onPlay(it, target) }
             },
-            onDismiss = { showP2pConsent = false },
+            onDismiss = {
+                showP2pConsent = false
+                pendingPlayTarget = null
+            },
         )
     }
 }
@@ -279,7 +351,12 @@ private fun MatchContent(
     magnet: MagnetLink,
     resolution: MagnetResolution,
     p2pEnabled: Boolean,
-    onPlay: () -> Unit,
+    fileRows: List<MagnetFileRow>,
+    isLoadingFiles: Boolean,
+    filesError: Boolean,
+    watchedKeys: Set<String>,
+    watchProgress: WatchProgressUiState,
+    onPlay: (MagnetPlaybackTarget?) -> Unit,
     onOpenDetails: () -> Unit,
     onSearchAnother: () -> Unit,
 ) {
@@ -293,10 +370,19 @@ private fun MatchContent(
         match?.rating?.let { rating -> "★ ${formatRating(rating)}" },
         match?.runtimeMinutes?.takeIf { it > 0 }?.let { "${it}m" },
     )
-    val episodeLine = listOfNotNull(
-        match?.episodeLabel?.let { label -> "${stringResource(Res.string.magnet_episode)} $label" },
-        match?.episodeTitle,
-    ).joinToString(" · ")
+    val batchRange = if (match?.kind != MagnetMediaKind.MOVIE) {
+        fileRows.episodeRange() ?: resolution.hint?.episodeRange
+    } else {
+        null
+    }
+    val episodeLine = if (batchRange != null) {
+        stringResource(Res.string.magnet_episodes_range, batchRange.first, batchRange.last)
+    } else {
+        listOfNotNull(
+            match?.episodeLabel?.let { label -> "${stringResource(Res.string.magnet_episode)} $label" },
+            match?.episodeTitle,
+        ).joinToString(" · ")
+    }
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -380,25 +466,21 @@ private fun MatchContent(
     }
 
     Spacer(modifier = Modifier.height(20.dp))
-    TorrentDetails(magnet)
-
-    Spacer(modifier = Modifier.height(20.dp))
-    Button(
-        onClick = onPlay,
-        modifier = Modifier.fillMaxWidth(),
-        enabled = P2pSettingsRepository.isVisible,
-    ) {
-        Icon(
-            imageVector = Icons.Filled.PlayArrow,
-            contentDescription = null,
-            modifier = Modifier.size(20.dp),
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(text = stringResource(Res.string.magnet_play))
-    }
+    TorrentDetails(
+        magnet = magnet,
+        title = title,
+        metaId = match?.metaId ?: "magnet:${magnet.infoHash}",
+        metaType = match?.kind?.metaType ?: MagnetMediaKind.SERIES.metaType,
+        fileRows = fileRows,
+        isLoadingFiles = isLoadingFiles,
+        filesError = filesError,
+        watchedKeys = watchedKeys,
+        watchProgress = watchProgress,
+        onPlay = onPlay,
+    )
 
     if (match != null) {
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(16.dp))
         OutlinedButton(
             onClick = onOpenDetails,
             modifier = Modifier.fillMaxWidth(),
@@ -423,8 +505,8 @@ private fun MatchContent(
         )
     }
 
-    Spacer(modifier = Modifier.height(4.dp))
     if (match != null) {
+        Spacer(modifier = Modifier.height(4.dp))
         TextButton(onClick = onSearchAnother) {
             Text(text = stringResource(Res.string.magnet_search_another))
         }
@@ -432,7 +514,21 @@ private fun MatchContent(
 }
 
 @Composable
-private fun TorrentDetails(magnet: MagnetLink) {
+private fun TorrentDetails(
+    magnet: MagnetLink,
+    title: String,
+    metaId: String,
+    metaType: String,
+    fileRows: List<MagnetFileRow>,
+    isLoadingFiles: Boolean,
+    filesError: Boolean,
+    watchedKeys: Set<String>,
+    watchProgress: WatchProgressUiState,
+    onPlay: (MagnetPlaybackTarget?) -> Unit,
+) {
+    val isBatch = fileRows.size > 1
+    val isEpisodeBatch = fileRows.count { it.episode != null } >= 2
+    val totalBytes = fileRows.sumOf { it.sizeBytes }.takeIf { it > 0 } ?: magnet.exactLength
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -441,20 +537,84 @@ private fun TorrentDetails(magnet: MagnetLink) {
             .padding(14.dp),
     ) {
         Text(
-            text = stringResource(Res.string.magnet_section_file),
+            text = stringResource(
+                when {
+                    isEpisodeBatch -> Res.string.magnet_section_episodes
+                    isBatch -> Res.string.magnet_section_files
+                    else -> Res.string.magnet_section_file
+                },
+            ),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary,
         )
+        if (isLoadingFiles) {
+            Spacer(modifier = Modifier.height(6.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 1.5.dp)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(Res.string.magnet_loading_files),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
         Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = magnet.displayName ?: magnet.uri,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground,
-            maxLines = 3,
-            overflow = TextOverflow.Ellipsis,
-        )
+        if (fileRows.isNotEmpty()) {
+            fileRows.forEach { row ->
+                val isEpisode = row.episode != null
+                val isWatched = isEpisode &&
+                    row.isWatched(metaId, metaType, watchedKeys, watchProgress)
+                TorrentFileRow(
+                    title = row.filename,
+                    label = row.episodeRowLabel(),
+                    sizeBytes = row.sizeBytes,
+                    onClick = { onPlay(row.toPlaybackTarget(fileRows)) },
+                    trailing = {
+                        if (isEpisode) {
+                            EpisodeWatchedToggle(
+                                isWatched = isWatched,
+                                progress = row.progressFraction(metaId, watchProgress),
+                                onClick = {
+                                    val season = row.playbackSeason
+                                    val episode = row.episode
+                                    if (season != null && episode != null) {
+                                        toggleMagnetEpisodeWatched(
+                                            metaId = metaId,
+                                            metaType = metaType,
+                                            title = title,
+                                            season = season,
+                                            episode = episode,
+                                            isWatched = isWatched,
+                                        )
+                                    }
+                                },
+                            )
+                        } else {
+                            PlayGlyph()
+                        }
+                    },
+                )
+            }
+        } else {
+            TorrentFileRow(
+                title = magnet.displayName ?: magnet.uri,
+                label = null,
+                sizeBytes = magnet.exactLength,
+                onClick = { onPlay(null) },
+                trailing = { PlayGlyph() },
+            )
+        }
+        if (filesError) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = stringResource(Res.string.magnet_files_error),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
         Spacer(modifier = Modifier.height(10.dp))
-        magnet.exactLength?.takeIf { it > 0 }?.let { bytes ->
+        totalBytes?.takeIf { it > 0 }?.let { bytes ->
             Text(
                 text = "${stringResource(Res.string.magnet_size)}: ${formatBytes(bytes)}",
                 style = MaterialTheme.typography.bodySmall,
@@ -474,6 +634,154 @@ private fun TorrentDetails(magnet: MagnetLink) {
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+    }
+}
+
+@Composable
+private fun TorrentFileRow(
+    title: String,
+    label: String?,
+    sizeBytes: Long?,
+    onClick: () -> Unit,
+    trailing: @Composable () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            if (label != null) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+            }
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            sizeBytes?.takeIf { it > 0 }?.let { bytes ->
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = formatBytes(bytes),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        Spacer(modifier = Modifier.width(4.dp))
+        trailing()
+    }
+}
+
+@Composable
+private fun PlayGlyph() {
+    Icon(
+        imageVector = Icons.Filled.PlayArrow,
+        contentDescription = stringResource(Res.string.magnet_play),
+        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier
+            .padding(horizontal = 7.dp)
+            .size(18.dp),
+    )
+}
+
+@Composable
+private fun EpisodeWatchedToggle(
+    isWatched: Boolean,
+    progress: Float,
+    onClick: () -> Unit,
+) {
+    val palette = MaterialTheme.themePalette
+    val accent = palette.accentBrush()
+    val trackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.22f)
+    val mutedColor = MaterialTheme.colorScheme.onSurfaceVariant
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        when {
+            isWatched -> Box(
+                modifier = Modifier
+                    .size(26.dp)
+                    .clip(CircleShape)
+                    .background(accent),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Visibility,
+                    contentDescription = stringResource(Res.string.episode_mark_unwatched),
+                    tint = palette.onSecondary,
+                    modifier = Modifier.size(15.dp),
+                )
+            }
+
+            progress > 0f -> Box(
+                modifier = Modifier.size(26.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val stroke = 2.dp.toPx()
+                    drawCircle(color = trackColor, style = Stroke(width = stroke))
+                    drawArc(
+                        brush = accent,
+                        startAngle = -90f,
+                        sweepAngle = 360f * progress.coerceIn(0f, 1f),
+                        useCenter = false,
+                        style = Stroke(width = stroke, cap = StrokeCap.Round),
+                    )
+                }
+                Icon(
+                    imageVector = Icons.Filled.VisibilityOff,
+                    contentDescription = stringResource(Res.string.episode_mark_watched),
+                    tint = mutedColor,
+                    modifier = Modifier.size(15.dp),
+                )
+            }
+
+            else -> Box(
+                modifier = Modifier
+                    .size(22.dp)
+                    .clip(CircleShape)
+                    .border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                        shape = CircleShape,
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.VisibilityOff,
+                    contentDescription = stringResource(Res.string.episode_mark_watched),
+                    tint = mutedColor,
+                    modifier = Modifier.size(14.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MagnetFileRow.episodeRowLabel(): String? {
+    val episode = episode ?: return null
+    val season = season
+    return if (season != null) {
+        "S${season.toString().padStart(2, '0')}E${episode.toString().padStart(2, '0')}"
+    } else {
+        "${stringResource(Res.string.magnet_episode)} $episode"
     }
 }
 

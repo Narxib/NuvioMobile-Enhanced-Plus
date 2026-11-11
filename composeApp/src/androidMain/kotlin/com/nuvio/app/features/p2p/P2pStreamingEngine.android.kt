@@ -338,6 +338,32 @@ actual object P2pStreamingEngine {
         }
     }
 
+    actual suspend fun listFiles(
+        infoHash: String,
+        trackers: List<String>,
+    ): List<P2pTorrentFile> = withContext(Dispatchers.IO) {
+        startMutex.withLock {
+            val activeEngine = ensureEngine()
+            val canonicalHash = canonicalP2pInfoHash(infoHash)
+            val torrentId = if (canonicalHash in knownTorrentIds) {
+                canonicalHash
+            } else {
+                val magnetUri = buildP2pMagnetUri(
+                    canonicalHash,
+                    (DEFAULT_TRACKERS + trackers).distinct(),
+                )
+                activeEngine.addMagnet(magnetUri).also { knownTorrentIds += it }
+            }
+            activeEngine.files(torrentId).map { file ->
+                P2pTorrentFile(
+                    index = file.index,
+                    path = file.path,
+                    sizeBytes = file.size,
+                )
+            }
+        }
+    }
+
     actual fun stopStream() {
         scheduleStop(shutdownEngine = false)
     }

@@ -200,6 +200,11 @@ actual object P2pStreamingEngine {
         }
     }
 
+    actual suspend fun listFiles(
+        infoHash: String,
+        trackers: List<String>,
+    ): List<P2pTorrentFile> = emptyList()
+
     actual suspend fun clearCache(): P2pCacheClearResult = lifecycleMutex.withLock {
         check(_state.value !is P2pStreamingState.Connecting &&
             _state.value !is P2pStreamingState.Streaming) {
