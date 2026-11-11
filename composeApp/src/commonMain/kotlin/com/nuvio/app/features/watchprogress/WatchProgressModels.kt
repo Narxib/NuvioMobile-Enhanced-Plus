@@ -11,6 +11,9 @@ import com.nuvio.app.features.watching.domain.WatchingContentRef
 import kotlinx.serialization.Serializable
 
 internal const val WatchProgressCompletionPercentThreshold = 90f
+internal const val WatchProgressCompletionThresholdMin = 50
+internal const val WatchProgressCompletionThresholdMax = 100
+internal const val WatchProgressCompletionThresholdStep = 5
 internal const val WatchProgressSourceLocal = "local"
 internal const val WatchProgressSourceTraktPlayback = "trakt_playback"
 internal const val WatchProgressSourceTraktHistory = "trakt_history"
@@ -72,7 +75,9 @@ data class WatchProgressEntry(
 
     val isEffectivelyCompleted: Boolean
         get() = isCompleted ||
-            (normalizedProgressPercent?.let { it >= WatchProgressCompletionPercentThreshold } == true) ||
+            (normalizedProgressPercent?.let { percent ->
+                percent >= ContinueWatchingPreferencesRepository.watchedThresholdPercent.toFloat()
+            } == true) ||
             (durationMs > 0L && isWatchProgressComplete(lastPositionMs, durationMs, false))
 
     val progressFraction: Float
@@ -244,6 +249,7 @@ data class ContinueWatchingPreferencesUiState(
     val dismissedNextUpKeys: Set<String> = emptySet(),
     val showResumePromptOnLaunch: Boolean = true,
     val sortMode: ContinueWatchingSortMode = ContinueWatchingSortMode.DEFAULT,
+    val watchedThresholdPercent: Int = WatchProgressCompletionPercentThreshold.toInt(),
 )
 
 internal fun nextUpDismissKey(

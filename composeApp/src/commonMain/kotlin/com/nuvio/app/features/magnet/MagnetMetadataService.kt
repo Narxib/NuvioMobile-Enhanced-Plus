@@ -26,6 +26,7 @@ object MagnetMetadataService {
             year = parsedHint.year ?: baseHint?.year,
             season = parsedHint.season ?: baseHint?.season,
             episode = parsedHint.episode ?: baseHint?.episode,
+            episodeRange = parsedHint.episodeRange ?: baseHint?.episodeRange,
         ) ?: baseHint
         if (hint == null) return MagnetResolution(hint = null, failure = MagnetResolveFailure.NoMatch)
 

@@ -843,6 +843,18 @@ internal fun settingsSearchEntries(
             PlaybackSearchRow("resume-prompt", stringResource(Res.string.settings_continue_watching_resume_prompt_title), stringResource(Res.string.settings_continue_watching_resume_prompt_description)),
         ),
     )
+    addContinueWatchingRows(
+        addRow = ::addRow,
+        pageLabel = continueWatchingPage,
+        section = stringResource(Res.string.settings_continue_watching_section_watched_status),
+        rows = listOf(
+            PlaybackSearchRow(
+                "watched-threshold",
+                stringResource(Res.string.settings_continue_watching_watched_threshold_title),
+                stringResource(Res.string.settings_continue_watching_watched_threshold_description),
+            ),
+        ),
+    )
 
     val posterSection = stringResource(Res.string.settings_poster_card_style)
     listOf(

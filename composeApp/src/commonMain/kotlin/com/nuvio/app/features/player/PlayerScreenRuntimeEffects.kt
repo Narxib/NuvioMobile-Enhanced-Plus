@@ -807,9 +807,31 @@ private fun PlayerScreenRuntime.BindPlayerMetadataAndSkipEffects() {
         parentMetaId,
         activeSeasonNumber,
         activeEpisodeNumber,
+        activeTorrentFileIdx,
+        torrentEpisodes,
         watchProgressUiState.entries,
         watchedUiState.watchedKeys,
     ) {
+        val torrentNext = nextTorrentEpisode()
+        if (torrentNext != null) {
+            nextEpisodeInfo = NextEpisodeInfo(
+                videoId = torrentNext.playbackVideoId(parentMetaId),
+                season = torrentNext.season,
+                episode = torrentNext.episode,
+                title = torrentNext.path.substringAfterLast('/').substringAfterLast('\\'),
+                thumbnail = null,
+                overview = null,
+                released = null,
+                hasAired = true,
+                isWatched = false,
+                unairedMessage = null,
+            )
+            return@LaunchedEffect
+        }
+        if (torrentEpisodes.isNotEmpty()) {
+            nextEpisodeInfo = null
+            return@LaunchedEffect
+        }
         if (!isSeries || playerMetaVideos.isEmpty()) {
             nextEpisodeInfo = null
             return@LaunchedEffect

@@ -611,9 +611,47 @@ internal fun PlayerScreenRuntime.switchToDownloadedEpisode(downloadItem: Downloa
     )
 }
 
+internal fun PlayerScreenRuntime.switchToTorrentEpisode(episode: PlayerTorrentEpisode) {
+    if (episode.fileIndex == activeTorrentFileIdx) return
+    flushWatchProgress()
+    resetEpisodePanelAndNextEpisodeState()
+    activeTorrentFileIdx = episode.fileIndex
+    activeTorrentFilename = episode.path
+    activeSourceFilename = episode.path
+    activeStreamTitle = torrentEpisodeName(episode.path)
+    activeSeasonNumber = episode.season
+    activeEpisodeNumber = episode.episode
+    activeEpisodeTitle = null
+    activeEpisodeThumbnail = null
+    activePauseDescription = null
+    activeInitialPositionMs = 0L
+    activeInitialProgressFraction = null
+    activeVideoId = episode.playbackVideoId(parentMetaId)
+    activeSourceIdentityKey = "torrent:${activeTorrentInfoHash.orEmpty()}:${episode.fileIndex}"
+    controlsVisible = true
+    InAppLogger.info(
+        "Player/Source",
+        "switch torrent episode fileIdx=${episode.fileIndex} s=${episode.season} e=${episode.episode}",
+    )
+}
+
+private fun torrentEpisodeName(path: String): String =
+    path.substringAfterLast('/').substringAfterLast('\\')
+
 internal fun PlayerScreenRuntime.playNextEpisode(automatic: Boolean = false) {
     if (nextEpisodeAutoPlaySearching || nextEpisodeAutoPlayCountdown != null) return
     nextEpisodePreloadTriggered = false
+    val torrentNext = nextTorrentEpisode()
+    if (torrentNext != null && nextEpisodeInfo?.videoId == torrentNext.playbackVideoId(parentMetaId)) {
+        if (!automatic || (
+                playerSettingsUiState.streamAutoPlayNextEpisodeEnabled &&
+                    !nextEpisodeCardDismissed && isAtNextEpisodeThreshold()
+                )
+        ) {
+            switchToTorrentEpisode(torrentNext)
+        }
+        return
+    }
     val playbackKey = activePlaybackKey
     val nextVideoId = nextEpisodeInfo?.takeIf { it.hasAired }?.videoId ?: return
     fun isCurrentRequest(): Boolean = playbackKey == activePlaybackKey &&

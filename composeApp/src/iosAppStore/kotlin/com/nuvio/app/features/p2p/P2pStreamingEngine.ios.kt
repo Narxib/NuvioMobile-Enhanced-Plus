@@ -16,6 +16,11 @@ actual object P2pStreamingEngine {
         throw P2pStreamingException(message)
     }
 
+    actual suspend fun listFiles(
+        infoHash: String,
+        trackers: List<String>,
+    ): List<P2pTorrentFile> = emptyList()
+
     actual suspend fun clearCache(): P2pCacheClearResult =
         P2pCacheClearResult(reclaimedBytes = 0L, remainingBytes = 0L, protectedBytes = 0L)
 

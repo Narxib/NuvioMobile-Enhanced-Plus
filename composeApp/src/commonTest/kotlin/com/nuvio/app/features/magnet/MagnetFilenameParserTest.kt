@@ -90,4 +90,43 @@ class MagnetFilenameParserTest {
         assertEquals(2002, hint?.year)
         assertFalse(hint?.isSeries == true)
     }
+
+    @Test
+    fun `parses anime episode ranges as batches`() {
+        val hint = MagnetFilenameParser.parse(
+            "[Erai-raws] Tensei Shitara Ken Deshita - 01 ~ 12 [1080p][Multiple Subtitle]",
+        )
+
+        assertEquals("Tensei Shitara Ken Deshita", hint?.title)
+        assertNull(hint?.episode)
+        assertEquals(1..12, hint?.episodeRange)
+        assertTrue(hint?.isSeries == true)
+    }
+
+    @Test
+    fun `parses episode ranges with a season marker`() {
+        val hint = MagnetFilenameParser.parse("Smallville S01E01-E06 1080p WEB-DL")
+
+        assertEquals("Smallville", hint?.title)
+        assertEquals(1, hint?.season)
+        assertNull(hint?.episode)
+        assertEquals(1..6, hint?.episodeRange)
+    }
+
+    @Test
+    fun `parses season packs with an episode range`() {
+        val hint = MagnetFilenameParser.parse("Smallville Season 1 (01-12) 1080p BluRay")
+
+        assertEquals("Smallville", hint?.title)
+        assertEquals(1, hint?.season)
+        assertEquals(1..12, hint?.episodeRange)
+    }
+
+    @Test
+    fun `does not treat release years as episode ranges`() {
+        val hint = MagnetFilenameParser.parse("Blade.Runner.2049.2017.1080p.BluRay.mkv")
+
+        assertNull(hint?.episodeRange)
+        assertFalse(hint?.isSeries == true)
+    }
 }

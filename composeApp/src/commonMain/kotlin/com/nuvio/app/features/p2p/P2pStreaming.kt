@@ -157,6 +157,12 @@ data class P2pStreamRequest(
     val trackers: List<String> = emptyList(),
 )
 
+data class P2pTorrentFile(
+    val index: Int,
+    val path: String,
+    val sizeBytes: Long,
+)
+
 internal fun canonicalP2pInfoHash(infoHash: String): String {
     val canonical = infoHash.trim().lowercase()
     require((canonical.length == 40 || canonical.length == 64) &&
@@ -230,6 +236,7 @@ expect object P2pStreamingEngine {
     val state: StateFlow<P2pStreamingState>
     val cacheState: StateFlow<P2pCacheUiState>
     suspend fun startStream(request: P2pStreamRequest): String
+    suspend fun listFiles(infoHash: String, trackers: List<String>): List<P2pTorrentFile>
     suspend fun clearCache(): P2pCacheClearResult
     fun stopStream()
     fun shutdown()

@@ -24,6 +24,8 @@ private data class StoredContinueWatchingPreferences(
     val showResumePromptOnLaunch: Boolean = true,
     @SerialName("sort_mode")
     val sortMode: ContinueWatchingSortMode = ContinueWatchingSortMode.DEFAULT,
+    @SerialName("watched_threshold_percent")
+    val watchedThresholdPercent: Int = WatchProgressCompletionPercentThreshold.toInt(),
 )
 
 object ContinueWatchingPreferencesRepository {
@@ -36,6 +38,9 @@ object ContinueWatchingPreferencesRepository {
     val uiState: StateFlow<ContinueWatchingPreferencesUiState> = _uiState.asStateFlow()
 
     private var hasLoaded = false
+
+    val watchedThresholdPercent: Int
+        get() = _uiState.value.watchedThresholdPercent
 
     fun ensureLoaded() {
         if (hasLoaded) return
@@ -100,6 +105,10 @@ object ContinueWatchingPreferencesRepository {
                 dismissedNextUpKeys = stored.dismissedNextUpKeys,
                 showResumePromptOnLaunch = stored.showResumePromptOnLaunch,
                 sortMode = stored.sortMode,
+                watchedThresholdPercent = stored.watchedThresholdPercent.coerceIn(
+                    WatchProgressCompletionThresholdMin,
+                    WatchProgressCompletionThresholdMax,
+                ),
             )
         } else {
             ContinueWatchingPreferencesUiState()
@@ -165,6 +174,17 @@ object ContinueWatchingPreferencesRepository {
         persist()
     }
 
+    fun setWatchedThresholdPercent(percent: Int) {
+        ensureLoaded()
+        val normalized = percent.coerceIn(
+            WatchProgressCompletionThresholdMin,
+            WatchProgressCompletionThresholdMax,
+        )
+        if (_uiState.value.watchedThresholdPercent == normalized) return
+        _uiState.value = _uiState.value.copy(watchedThresholdPercent = normalized)
+        persist()
+    }
+
     fun removeDismissedNextUpKeysForContent(contentId: String) {
         ensureLoaded()
         val normalizedContentId = contentId.trim()
@@ -191,6 +211,7 @@ object ContinueWatchingPreferencesRepository {
                     dismissedNextUpKeys = _uiState.value.dismissedNextUpKeys,
                     showResumePromptOnLaunch = _uiState.value.showResumePromptOnLaunch,
                     sortMode = _uiState.value.sortMode,
+                    watchedThresholdPercent = _uiState.value.watchedThresholdPercent,
                 ),
             ),
         )

@@ -16,6 +16,13 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.TimeMark
 import kotlin.time.TimeSource
 
+data class PlayerTorrentEpisode(
+    val fileIndex: Int,
+    val path: String,
+    val season: Int,
+    val episode: Int,
+)
+
 data class PlayerLaunch(
     val profileId: Int,
     val title: String,
@@ -46,6 +53,7 @@ data class PlayerLaunch(
     val torrentFileIdx: Int? = null,
     val torrentFilename: String? = null,
     val torrentTrackers: List<String> = emptyList(),
+    val torrentEpisodes: List<PlayerTorrentEpisode> = emptyList(),
     val initialPositionMs: Long = 0L,
     val initialProgressFraction: Float? = null,
     val contentLanguage: String? = null,

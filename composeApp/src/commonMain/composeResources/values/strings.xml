@@ -922,6 +922,11 @@
     <string name="settings_continue_watching_section_on_launch">ON LAUNCH</string>
     <string name="settings_continue_watching_section_up_next_behavior">NEXT UP BEHAVIOR</string>
     <string name="settings_continue_watching_section_visibility">VISIBILITY</string>
+    <string name="settings_continue_watching_section_watched_status">WATCHED STATUS</string>
+    <string name="settings_continue_watching_watched_threshold_title">Mark as watched from</string>
+    <string name="settings_continue_watching_watched_threshold_description">Percentage of an episode that counts as watched.</string>
+    <string name="settings_continue_watching_watched_threshold_slider">Minimum percentage</string>
+    <string name="settings_continue_watching_watched_threshold_value">%1$d%</string>
     <string name="settings_continue_watching_show_description">Display the Continue Watching shelf on the Home screen.</string>
     <string name="settings_continue_watching_show_title">Show Continue Watching</string>
     <string name="settings_continue_watching_style_card">Card</string>

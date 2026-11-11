@@ -23,4 +23,9 @@
     <string name="magnet_episode">Episodio</string>
     <string name="magnet_movie">Película</string>
     <string name="magnet_series">Serie</string>
+    <string name="magnet_section_files">Archivos del torrent</string>
+    <string name="magnet_section_episodes">Episodios</string>
+    <string name="magnet_episodes_range">Episodios %1$d–%2$d</string>
+    <string name="magnet_loading_files">Leyendo los archivos del torrent…</string>
+    <string name="magnet_files_error">No se pudieron leer los archivos del torrent. Aun así puedes intentar reproducir el magnet.</string>
 </resources>
