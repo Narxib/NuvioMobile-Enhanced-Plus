@@ -4,7 +4,7 @@ param(
     [Parameter(Mandatory)][string]$Name,
     [string]$NotesFile,
     [string[]]$ApkPath,
-    [string]$ApkDir = "androidApp/build/outputs/apk/full/debug",
+    [string]$ApkDir = "androidApp/build/outputs/apk/full/optimized",
     [string]$ForkRepo = "Narxib/NuvioMobile-Enhanced-Plus",
     [string]$TargetCommitish = "main",
     [switch]$Prerelease
@@ -46,7 +46,7 @@ $headers = @{
 $rows = @()
 foreach ($apk in $apkFiles) {
     $abi = Get-AbiFromName $apk.Name
-    $assetName = $apk.Name -replace "-debug\.apk$", "-release.apk"
+    $assetName = $apk.Name -replace "-(debug|optimized)\.apk$", "-release.apk"
     $sha256 = (Get-FileHash -LiteralPath $apk.FullName -Algorithm SHA256).Hash
     $sizeMb = [math]::Round($apk.Length / 1MB, 1)
     $rows += [pscustomobject]@{

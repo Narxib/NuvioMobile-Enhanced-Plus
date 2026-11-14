@@ -50,9 +50,15 @@ val requestedTaskNames = gradle.startParameter.taskNames.map { it.substringAfter
 val buildsReleaseApks = requestedTaskNames.any {
     it.startsWith("assemble", ignoreCase = true) && it.endsWith("Release", ignoreCase = true)
 }
+val optimizedBuildType = "optimized"
+val buildsOptimizedApks = requestedTaskNames.any {
+    it.startsWith("assemble", ignoreCase = true) && it.endsWith("Optimized", ignoreCase = true)
+}
 val splitsDebugApks = providers.gradleProperty("nuvio.android.splitAbis")
     .map(String::toBooleanStrict)
     .getOrElse(false)
+val hasReleaseSigning = releaseKeystore != null && releaseStorePassword != null &&
+    releaseKeyAlias != null && releaseKeyPassword != null
 
 android {
     namespace = "com.nuvio.android"
@@ -61,7 +67,7 @@ android {
 
     signingConfigs {
         create("release") {
-            if (releaseKeystore != null && releaseStorePassword != null && releaseKeyAlias != null && releaseKeyPassword != null) {
+            if (hasReleaseSigning) {
                 storeFile = releaseKeystore
                 storePassword = releaseStorePassword
                 keyAlias = releaseKeyAlias
@@ -125,7 +131,7 @@ android {
 
     splits {
         abi {
-            isEnable = buildsReleaseApks || splitsDebugApks
+            isEnable = buildsReleaseApks || buildsOptimizedApks || splitsDebugApks
             reset()
             include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
             isUniversalApk = false
@@ -146,6 +152,25 @@ android {
             signingConfig = signingConfigs.getByName("release")
             ndk {
                 debugSymbolLevel = "FULL"
+            }
+        }
+
+        // Published build: R8 + resource shrinking over the release configuration, but signed
+        // with the debug key and installed under com.nuviodebug.com so it coexists with the
+        // official app. A plain debug build ships an unminified dex and is about twice as big.
+        create(optimizedBuildType) {
+            initWith(getByName("release"))
+            isDebuggable = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "../composeApp/proguard-rules.pro",
+            )
+            signingConfig = signingConfigs.getByName(if (hasReleaseSigning) "release" else "debug")
+            matchingFallbacks += listOf("release")
+            ndk {
+                debugSymbolLevel = "NONE"
             }
         }
     }
@@ -223,6 +248,11 @@ val rust = tasks.register<CargoNdkBuild>("buildRust") {
 androidComponents {
     onVariants(selector().withBuildType("debug")) { variant ->
         variant.applicationId.set("com.nuviodebug.com")
+    }
+    onVariants(selector().withBuildType(optimizedBuildType)) { variant ->
+        variant.applicationId.set(
+            providers.gradleProperty("nuvio.android.applicationId").getOrElse("com.nuviodebug.com"),
+        )
     }
     onVariants { variant ->
         variant.sources.jniLibs?.addGeneratedSourceDirectory(rust, CargoNdkBuild::jniLibs)

@@ -55,14 +55,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 if (-not $SkipBuild) {
-    $env:ANDROID_HOME = "D:\Android\Sdk"
-    $env:ANDROID_SDK_ROOT = "D:\Android\Sdk"
-    $env:GRADLE_USER_HOME = "D:\gradle-home"
-    $env:RUSTUP_HOME = "D:\rustup"
-    $env:CARGO_HOME = "D:\cargo"
-    $env:Path = "D:\mingw64\bin;D:\cargo\bin;$env:Path"
-
-    & .\gradlew.bat ":androidApp:assembleFullDebug" "-Pnuvio.android.distribution=full" "-Pnuvio.ios.distribution=appstore" --console=plain
+    & .\gradlew.bat ":androidApp:assembleFullOptimized" "-Pnuvio.android.distribution=full" "-Pnuvio.ios.distribution=appstore" --console=plain
     if ($LASTEXITCODE -ne 0) {
         throw "Build failed. Restore the previous state with: git reset --hard $backupBranch"
     }
