@@ -11,6 +11,7 @@ import coil3.network.ktor3.KtorNetworkFetcherFactory
 import coil3.request.CachePolicy
 import coil3.request.crossfade
 import coil3.svg.SvgDecoder
+import com.nuvio.app.core.diagnostics.ProcessExitRecorder
 import com.nuvio.app.core.network.DnsPlatform
 import com.nuvio.app.core.network.SharedOkHttpClient
 import com.nuvio.app.core.network.NetworkErrorInterceptor
@@ -28,6 +29,8 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
 
     override fun onCreate() {
         super.onCreate()
+        ProcessExitRecorder.installCrashHandler(this)
+        ProcessExitRecorder.recordPendingExits(this)
         DnsPlatform.initialize(this)
     }
 
