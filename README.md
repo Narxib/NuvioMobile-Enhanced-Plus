@@ -51,7 +51,8 @@ Everything else comes from [Nuvio Enhanced](https://github.com/luqmanfadlli/Nuvi
 
 Download the APK from [Releases](https://github.com/Narxib/NuvioMobile-Enhanced-Plus/releases/latest).
 
-- **Debug build** signed with the debug key. Personal use, not for the Play Store.
+- **Optimized build**: R8 minification and resource shrinking, signed with the debug key. Personal use, not for the
+  Play Store.
 - Installs as `com.nuviodebug.com`, so it can live alongside the official app. It replaces other debug builds of
   Enhanced or Plus, since they share the same application id.
 - Shows up as **Nuvio+** on the launcher, with its own icon and splash screen.
@@ -71,9 +72,12 @@ git switch main
 Requires Android Studio and the Android SDK.
 
 ```bash
-./gradlew :androidApp:assembleFullDebug        # sideload flavour
-./gradlew :androidApp:assemblePlaystoreDebug   # store flavour
+./gradlew :androidApp:assembleFullOptimized        # sideload flavour (minified, debug key)
+./gradlew :androidApp:assemblePlaystoreOptimized   # store flavour
 ```
+
+`assembleFullDebug` still works for quick iteration, but it is **not** what gets published: without R8 the dex is about
+4x larger and every per-ABI APK grows to ~80 MB instead of ~45 MB.
 
 ### iOS
 
@@ -107,11 +111,15 @@ points with upstream code.
 ## Publishing a release
 
 ```powershell
-.\scripts\publish-release.ps1 -Tag "v0.6.7-magnet.2" -Name "0.6.7 + Magnet 2" -NotesFile notes.md
+.\gradlew.bat :androidApp:assembleFullOptimized "-Pnuvio.android.distribution=full" "-Pnuvio.ios.distribution=appstore"
+.\scripts\publish-release.ps1 -Tag "0.6.11" -Name "0.6.11" -NotesFile notes.md
 ```
 
-It creates the GitHub release from `main`, computes the SHA-256 and uploads the APK with `curl` (handles the ~162 MB
-file without stalling).
+It creates the GitHub release from `main`, computes the SHA-256 and uploads each per-ABI APK with `curl` (handles the
+~47 MB files without stalling).
+
+Releases are signed with the local `~/.android/debug.keystore`. **Keep a backup of that file**: if it changes, the new
+APK cannot update an existing install and users have to uninstall first.
 
 ---
 
