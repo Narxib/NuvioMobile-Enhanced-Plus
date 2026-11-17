@@ -33,8 +33,9 @@ internal data class GitHubAssetDto(
 internal class NoChannelReleaseException : IllegalStateException()
 
 internal const val GITHUB_API_BASE = "https://api.github.com"
-internal const val GITHUB_OWNER = "luqmanfadlli"
-internal const val GITHUB_REPO = "NuvioMobile-Enhanced"
+// Releases come from this fork, not from the upstream Enhanced repository.
+internal const val GITHUB_OWNER = "Narxib"
+internal const val GITHUB_REPO = "NuvioMobile-Enhanced-Plus"
 
 internal object AppUpdaterRepository {
     private val json = Json {
