@@ -9,7 +9,8 @@ param(
     [string]$ApkDir = "androidApp/build/outputs/apk/full/optimized",
     [string]$ForkRepo = "Narxib/NuvioMobile-Enhanced-Plus",
     [string]$TargetCommitish = "main",
-    [switch]$Prerelease
+    [switch]$Prerelease,
+    [switch]$DryRun
 )
 
 $ErrorActionPreference = "Stop"
@@ -89,9 +90,17 @@ function Test-ReleaseNoteSubject {
 }
 
 $script:authorCache = @{}
+$script:localUserEmail = (git config user.email).Trim().ToLowerInvariant()
+$script:forkOwner = $ForkRepo.Split('/')[0]
+
 function Resolve-CommitAuthor {
     param([string]$Sha, [string]$AuthorName, [string]$AuthorEmail)
 
+    # Commits made from this clone are attributed to the fork owner so the notes never ping an
+    # unrelated account that happens to own the local git email address.
+    if ($script:localUserEmail -and $AuthorEmail.Trim().ToLowerInvariant() -eq $script:localUserEmail) {
+        return $script:forkOwner
+    }
     if ($AuthorEmail -match '^(?:\d+\+)?([^@]+)@users\.noreply\.github\.com$') {
         return $Matches[1]
     }
@@ -192,6 +201,17 @@ $table = $rows |
     Out-String
 
 $body = "$notes`n`n---`n`n### Downloads`n`n| ABI | File | Size | SHA-256 |`n|---|---|---:|---|`n$table"
+
+if ($DryRun) {
+    Write-Host "--- Release notes for $Tag ---"
+    Write-Host $notes
+    Write-Host ""
+    Write-Host "--- Assets ---"
+    foreach ($row in $rows) { Write-Host "$($row.Abi)  $($row.File)  $($row.SizeMb) MB" }
+    Write-Host ""
+    Write-Host "Dry run: nothing was published."
+    exit 0
+}
 
 $payload = @{
     tag_name         = $Tag
