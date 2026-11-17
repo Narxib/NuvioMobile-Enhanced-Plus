@@ -1,8 +1,10 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][string]$Tag,
-    [Parameter(Mandatory)][string]$Name,
+    [string]$Name,
     [string]$NotesFile,
+    [string]$NotesFrom,
+    [string]$NotesOut,
     [string[]]$ApkPath,
     [string]$ApkDir = "androidApp/build/outputs/apk/full/optimized",
     [string]$ForkRepo = "Narxib/NuvioMobile-Enhanced-Plus",
@@ -12,6 +14,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 Set-Location (git rev-parse --show-toplevel)
+
+if (-not $Name) { $Name = $Tag }
 
 $abiNames = @("arm64-v8a", "armeabi-v7a", "x86_64", "x86")
 
@@ -43,6 +47,131 @@ $headers = @{
     Accept = "application/vnd.github+json"
 }
 
+# Release notes are generated from the commits since the previous published release so the
+# in-app What's New screen has real content. Sections named "What's Changed" are rendered as
+# the changelog list, while "Downloads" is ignored by the app.
+$separator = [char]31
+
+function Resolve-TagCommit {
+    param([string]$TagName)
+    $local = git rev-parse --verify --quiet "$TagName^{commit}"
+    if ($LASTEXITCODE -eq 0 -and $local) { return $local }
+
+    $remoteTags = git ls-remote --tags "https://github.com/$ForkRepo.git"
+    $entries = $remoteTags | ForEach-Object {
+        $parts = $_ -split "`t"
+        if ($parts.Length -eq 2) { [pscustomobject]@{ Sha = $parts[0]; Ref = $parts[1] } }
+    }
+    $peeled = $entries | Where-Object { $_.Ref -eq "refs/tags/$TagName^{}" } | Select-Object -First 1
+    if ($peeled) { return $peeled.Sha }
+    $direct = $entries | Where-Object { $_.Ref -eq "refs/tags/$TagName" } | Select-Object -First 1
+    if ($direct) { return $direct.Sha }
+    return $null
+}
+
+function Get-PreviousReleaseTag {
+    $releases = Invoke-RestMethod -Method Get `
+        -Uri "https://api.github.com/repos/$ForkRepo/releases?per_page=20" `
+        -Headers $headers
+    $releases |
+        Where-Object { $_.tag_name -and $_.tag_name -ne $Tag -and -not $_.draft } |
+        Select-Object -First 1 -ExpandProperty tag_name
+}
+
+function Test-ReleaseNoteSubject {
+    param([string]$Subject)
+    $subjectLower = $Subject.ToLowerInvariant()
+    if ($subjectLower.Contains("[skip release notes]")) { return $false }
+    if ($subjectLower -match '^(bump(\s.*)?version|version\s+bump)(\s.*)?$') { return $false }
+    if ($subjectLower -match '^cleanup([\s\p{P}].*)?$') { return $false }
+    if ($subjectLower -match '^(build|chore|ci|docs|style|test)(\([^)]*\))?:') { return $false }
+    return $true
+}
+
+$script:authorCache = @{}
+function Resolve-CommitAuthor {
+    param([string]$Sha, [string]$AuthorName, [string]$AuthorEmail)
+
+    if ($AuthorEmail -match '^(?:\d+\+)?([^@]+)@users\.noreply\.github\.com$') {
+        return $Matches[1]
+    }
+    if ($script:authorCache.ContainsKey($AuthorEmail)) { return $script:authorCache[$AuthorEmail] }
+
+    $login = ""
+    try {
+        $login = (Invoke-RestMethod -Method Get `
+            -Uri "https://api.github.com/repos/$ForkRepo/commits/$Sha" `
+            -Headers $headers).author.login
+    } catch {
+        $login = ""
+    }
+    if (-not $login) {
+        $login = ($AuthorName -replace '[^A-Za-z0-9_-]', '')
+        if (-not $login) { $login = "unknown" }
+    }
+    $script:authorCache[$AuthorEmail] = $login
+    return $login
+}
+
+function Get-NotesFromCommits {
+    param([string]$FromRef)
+
+    $format = "%H$separator%s$separator%an$separator%ae"
+    $lines = git log "$FromRef..$TargetCommitish" --no-merges "--format=$format"
+    if ($LASTEXITCODE -ne 0) { throw "git log failed for range $FromRef..$TargetCommitish" }
+
+    $seen = New-Object 'System.Collections.Generic.HashSet[string]'
+    $bullets = New-Object 'System.Collections.Generic.List[string]'
+    foreach ($line in $lines) {
+        if (-not $line) { continue }
+        $parts = $line -split [regex]::Escape([string]$separator)
+        if ($parts.Length -lt 4) { continue }
+        $sha, $subject, $authorName, $authorEmail = $parts[0], $parts[1], $parts[2], $parts[3]
+
+        if (-not (Test-ReleaseNoteSubject $subject)) { continue }
+        $normalizedSubject = ($subject.ToLowerInvariant() -replace '\s+', ' ' -replace '[\s.]+$', '')
+        if (-not $seen.Add($normalizedSubject)) { continue }
+
+        $displaySubject = $subject -replace '\s+$', '' -replace '\.$', ''
+        $author = Resolve-CommitAuthor $sha $authorName $authorEmail
+        $bullets.Add("- $displaySubject @$author")
+    }
+    return $bullets
+}
+
+$notes = if ($NotesFile) {
+    [IO.File]::ReadAllText((Resolve-Path -LiteralPath $NotesFile), [Text.Encoding]::UTF8)
+} else {
+    $fromRef = $NotesFrom
+    if (-not $fromRef) {
+        $previousTag = Get-PreviousReleaseTag
+        if ($previousTag) {
+            $fromRef = Resolve-TagCommit $previousTag
+            Write-Host "Generating release notes from $previousTag ($fromRef) to $TargetCommitish"
+        }
+    }
+    if (-not $fromRef) {
+        Write-Host "No previous release found; release notes cover the last 50 commits."
+        $fromRef = "$TargetCommitish~50"
+    }
+
+    $bullets = Get-NotesFromCommits $fromRef
+    if ($bullets.Count -eq 0) {
+        "## What's Changed`n`nMaintenance release built from $TargetCommitish."
+    } else {
+        "## What's Changed`n`n" + ($bullets -join "`n")
+    }
+}
+
+if ($NotesOut) {
+    [IO.File]::WriteAllText(
+        [IO.Path]::GetFullPath((Join-Path (Get-Location) $NotesOut)),
+        $notes,
+        [Text.UTF8Encoding]::new($false)
+    )
+    Write-Host "Release notes written to $NotesOut"
+}
+
 $rows = @()
 foreach ($apk in $apkFiles) {
     $abi = Get-AbiFromName $apk.Name
@@ -62,11 +191,6 @@ $table = $rows |
     ForEach-Object { "| ``$($_.Abi)`` | ``$($_.File)`` | $($_.SizeMb) MB | ``$($_.Sha256)`` |" } |
     Out-String
 
-$notes = if ($NotesFile) {
-    [IO.File]::ReadAllText((Resolve-Path -LiteralPath $NotesFile), [Text.Encoding]::UTF8)
-} else {
-    "Build $Tag from $TargetCommitish."
-}
 $body = "$notes`n`n---`n`n### Downloads`n`n| ABI | File | Size | SHA-256 |`n|---|---|---:|---|`n$table"
 
 $payload = @{
